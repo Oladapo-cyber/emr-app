@@ -10,14 +10,14 @@ import Footer from "./components/Footer";
 
 function App() {
   return (
-    <>
+    <div classname="font-inter">
       <Navbar />
       <div className="flex">
         <div className="bg-gray-100">
           <Sidebar />
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 px-6 py-4">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/patients" element={<Patients />} />
@@ -28,7 +28,7 @@ function App() {
         </div>
       </div>
       <Footer />
-    </>
+    </div>
   );
 }
 
