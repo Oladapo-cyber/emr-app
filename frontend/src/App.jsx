@@ -10,14 +10,11 @@ import Footer from "./components/Footer";
 
 function App() {
   return (
-    <div classname="font-inter">
-      <Navbar />
-      <div className="flex">
-        <div className="bg-gray-100">
-          <Sidebar />
-        </div>
-
-        <div className="flex-1 px-6 py-4">
+    <div className="font-inter">
+      <Sidebar />
+      <div className="ml-[220px] min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 px-6 py-4">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/patients" element={<Patients />} />
@@ -25,9 +22,8 @@ function App() {
             <Route path="/medical-records" element={<MedicalRecords />} />
             <Route path="/scheduling" element={<Scheduling />} />
           </Routes>
-        </div>
+        </main>
       </div>
-      <Footer />
     </div>
   );
 }
