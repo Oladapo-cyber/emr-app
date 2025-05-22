@@ -179,10 +179,6 @@ const Sidebar = () => {
             hover:bg-red-200 hover:text-red-500 transition-colors
             font-medium
           `}
-            style={{
-              backgroundColor: "inherit",
-              color: "inherit",
-            }}
           >
             <Logout
               sx={{
