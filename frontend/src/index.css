@@ -3,3 +3,7 @@
 @theme {
   --font-inter: "inter", serif;
 }
+
+.custom-gray {
+  color: #afaebe;
+}
