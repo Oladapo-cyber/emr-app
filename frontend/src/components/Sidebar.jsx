@@ -22,23 +22,23 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-[230px] bg-white border-r-2 border-gray-200 p-2 flex flex-col z-30">
-      <h1 className="flex items-center justify-start text-2xl font-bold m-2 tracking-wider">
+    <aside className="fixed top-0 left-0 h-screen w-[230px] bg-white border-r-2 border-gray-200  flex flex-col z-30">
+      <h1 className="flex items-center p-2 justify-start text-2xl font-bold m-2 tracking-wider">
         EcoClinic
       </h1>
-      <div className="flex items-center border border-[#e6e8ea] rounded-md mb-2">
+      <div className="flex items-center border mx-2 px-2  border-[#e6e8ea] rounded-md mb-2">
         <LocalHospitalOutlined
           sx={{ fontSize: 32 }}
           className="flex text-[#5c5f68] justify-center items-center"
         />
-        <div className="flex flex-col">
+        <div className="flex flex-col ">
           <h1 className="text-[#545859] font-semibold pl-1">Daps Hospital</h1>
           <p className="font-medium text-[#848997] text-sm pl-2">
             Lagos, Nigeria
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 text-gray-600 py-4">
+      <div className="flex items-center gap-2 p-2 text-gray-600 py-4">
         <DashboardRounded
           sx={{
             fontSize: 28,
@@ -50,7 +50,8 @@ const Sidebar = () => {
         <h1 className="font-mono text-[#253344]">Dashboard</h1>
       </div>
       <h3 className="pl-2 text-gray-400 uppercase text-sm">Clinic</h3>
-      <ul className="text-[#283747] my-2">
+
+      <ul className="text-[#283747] my-2 border-b-2 border-gray-200 p-2">
         <li className="pb-2">
           <NavLink
             to="/reservations"
@@ -191,8 +192,8 @@ const Sidebar = () => {
           </button>
         </li>
       </ul>
-      <hr />
-      <ul className="text-[#283747] mt-2">
+
+      <ul className="text-[#283747] mt-2 px-2">
         <li className="pb-2">
           <NavLink
             to={"/help"}
