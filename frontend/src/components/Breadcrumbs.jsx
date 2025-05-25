@@ -14,6 +14,7 @@ const pageNames = {
   "/reservations": "Reservations",
   "/settings": "Settings",
   "/login": "Login",
+  "/patients/patient-details": "Patient Details",
 };
 
 const Breadcrumbs = () => {
@@ -43,7 +44,7 @@ const Breadcrumbs = () => {
           ) : (
             <Link
               to={crumb.to}
-              className="text-gray-500 hover:text-blue-600 hover:underline"
+              className="text-gray-400 font-medium hover:text-gray-500"
             >
               {crumb.name}
             </Link>
