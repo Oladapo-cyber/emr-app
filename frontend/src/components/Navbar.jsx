@@ -60,7 +60,7 @@ const Navbar = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search for anything here..."
-                className="pl-10 pr-3 h-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="pl-10 pr-3 h-10 border bg-[#f5f7fb] border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
               <Search
                 className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
