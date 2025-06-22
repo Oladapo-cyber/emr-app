@@ -12,6 +12,7 @@ import {
   Person,
   LocalHospital,
 } from "@mui/icons-material";
+import { Link } from "react-router-dom";
 
 const medicalRecords = [
   {
@@ -185,7 +186,10 @@ const MedicalRecords = () => {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                    <Link
+                      to={`/patients/patient-details?id=${record.patientId}&tab=Medical Record`}
+                      className="flex items-center gap-3 hover:text-blue-600 transition-colors"
+                    >
                       <Avatar
                         sx={{
                           width: 40,
@@ -207,7 +211,7 @@ const MedicalRecords = () => {
                           ID: {record.patientId}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-2">
