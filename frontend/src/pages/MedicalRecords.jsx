@@ -261,12 +261,18 @@ const MedicalRecords = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <Link
+                        to={`/patients/patient-details?id=${record.patientId}&tab=Medical Record&recordId=${record.id}`}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
                         <Visibility fontSize="small" />
-                      </button>
-                      <button className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                      </Link>
+                      <Link
+                        to={`/patients/patient-details?id=${record.patientId}&tab=Medical Record&recordId=${record.id}&edit=true`}
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      >
                         <Edit fontSize="small" />
-                      </button>
+                      </Link>
                       <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
                         <MoreVert fontSize="small" />
                       </button>
