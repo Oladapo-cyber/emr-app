@@ -15,8 +15,8 @@ import Patients from "./pages/Patients";
 import Scheduling from "./pages/Scheduling";
 import Breadcrumbs from "./components/Breadcrumbs";
 import PatientDetails from "./components/PatientDetails";
-import NotFound from "./components/NotFound";
 import CustomerSupport from "./pages/CustomerSupport";
+import NotFound from "./components/modals/NotFound";
 
 function App() {
   const location = useLocation();

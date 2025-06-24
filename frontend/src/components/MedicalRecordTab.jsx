@@ -11,7 +11,10 @@ import {
   LocalHospital,
   Edit,
   Visibility,
+  FilterList,
 } from "@mui/icons-material";
+import RecordDetailModal from "./modals/RecordDetailModal";
+import EditRecordModal from "./modals/EditRecordModal";
 
 // Sample medical records data for general hospital
 const medicalRecordsData = {
@@ -110,6 +113,13 @@ const MedicalRecordTab = ({ patientId }) => {
   const recordId = searchParams.get("recordId");
   const isEditing = searchParams.get("edit") === "true";
 
+  // Add these state variables for the modal
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailRecord, setSelectedDetailRecord] = useState(null);
+
+  // Add state for active filter
+  const [activeFilter, setActiveFilter] = useState("all");
+
   // Get records for this patient
   const records = medicalRecordsData[id] || [];
 
@@ -165,10 +175,16 @@ const MedicalRecordTab = ({ patientId }) => {
     setSearchParams({ id, tab: "Medical Record", recordId });
   };
 
+  // Filter records based on active filter
+  const filteredRecords = records.filter((record) => {
+    if (activeFilter === "all") return true;
+    return record.category === activeFilter;
+  });
+
   return (
     <div className="space-y-6">
       {/* Medical Record Categories */}
-      <div className="flex gap-2 mb-4">
+      {/* <div className="flex gap-2 mb-4">
         <button className="px-4 py-1 rounded-full border bg-blue-600 text-white border-blue-600">
           All Records
         </button>
@@ -181,6 +197,78 @@ const MedicalRecordTab = ({ patientId }) => {
         <button className="px-4 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">
           Procedures
         </button>
+      </div> */}
+
+      {/* Filter section */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <FilterList className="text-gray-500" />
+          <span className="text-sm text-gray-500 font-medium">
+            Filter by record type:
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+              activeFilter === "all"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            All Records
+          </button>
+
+          <button
+            onClick={() => setActiveFilter("Diagnosis")}
+            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+              activeFilter === "Diagnosis"
+                ? "bg-green-100 text-green-700 border border-green-200"
+                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            Diagnosis
+          </button>
+
+          <button
+            onClick={() => setActiveFilter("Lab Work")}
+            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+              activeFilter === "Lab Work"
+                ? "bg-purple-100 text-purple-700 border border-purple-200"
+                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            Lab Work
+          </button>
+
+          <button
+            onClick={() => setActiveFilter("Procedure")}
+            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+              activeFilter === "Procedure"
+                ? "bg-orange-100 text-orange-700 border border-orange-200"
+                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            Procedure
+          </button>
+
+          <button
+            onClick={() => setActiveFilter("Follow-up")}
+            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+              activeFilter === "Follow-up"
+                ? "bg-teal-100 text-teal-700 border border-teal-200"
+                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+            Follow-up
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-8">
@@ -235,125 +323,15 @@ const MedicalRecordTab = ({ patientId }) => {
         {/* Medical Record Timeline OR Edit Form */}
         <div className="flex-1">
           {isEditing && currentRecord ? (
-            // EDIT FORM
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white border border-blue-200 rounded-xl p-6 shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Edit className="text-blue-500" />
-                  Edit Medical Record
-                </h2>
-                <span className="text-sm text-gray-500">
-                  ID: {currentRecord.id}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    name="category"
-                    value={formValues.category}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="Diagnosis">Diagnosis</option>
-                    <option value="Lab Work">Lab Work</option>
-                    <option value="Procedure">Procedure</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Medication">Medication</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formValues.status}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Condition
-                  </label>
-                  <input
-                    type="text"
-                    name="condition"
-                    value={formValues.condition}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Treatment
-                  </label>
-                  <input
-                    type="text"
-                    name="treatment"
-                    value={formValues.treatment}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Doctor
-                  </label>
-                  <input
-                    type="text"
-                    name="doctor"
-                    value={formValues.doctor}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  name="notes"
-                  value={formValues.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            <EditRecordModal
+              record={currentRecord}
+              onSave={(updatedRecord) => {
+                // In a real app, you would update the database here
+                // For now, just exit edit mode
+                setSearchParams({ id, tab: "Medical Record", recordId });
+              }}
+              onCancel={handleCancel}
+            />
           ) : (
             // Keep your existing timeline view code
             <div className="mb-6">
@@ -371,7 +349,7 @@ const MedicalRecordTab = ({ patientId }) => {
 
               {records.length > 0 ? (
                 <div className="space-y-5">
-                  {records.map((record) => (
+                  {filteredRecords.map((record) => (
                     <div
                       key={record.id}
                       className={`border rounded-xl p-4 shadow-sm ${
@@ -445,15 +423,16 @@ const MedicalRecordTab = ({ patientId }) => {
                         </span>
                         <div className="flex items-center gap-3">
                           <button
-                            className="text-blue-500 text-sm hover:font-bold hover:text-blue-700"
+                            className="text-blue-500 text-sm hover:text-blue-700 hover:font-bold flex items-center gap-1"
                             onClick={() => {
-                              // You can add detailed view functionality here later
+                              setSelectedDetailRecord(record);
+                              setShowDetailModal(true);
                             }}
                           >
                             <Visibility fontSize="small" /> View Details
                           </button>
                           <button
-                            className="flex items-center gap-1 text-green-600 text-sm hover:text-green-800 hover:font-bold"
+                            className="flex items-center gap-1 text-green-500 text-sm hover:text-green-700 hover:font-bold"
                             onClick={() => {
                               // This updates URL parameters to trigger edit mode
                               setSearchParams({
@@ -486,6 +465,23 @@ const MedicalRecordTab = ({ patientId }) => {
           )}
         </div>
       </div>
+
+      {/* Record Detail Modal */}
+      {showDetailModal && (
+        <RecordDetailModal
+          record={selectedDetailRecord}
+          onClose={() => setShowDetailModal(false)}
+          onEdit={(recordId) => {
+            setSearchParams({
+              id: id,
+              tab: "Medical Record",
+              recordId: recordId,
+              edit: "true",
+            });
+          }}
+          getCategoryIcon={getCategoryIcon}
+        />
+      )}
     </div>
   );
 };

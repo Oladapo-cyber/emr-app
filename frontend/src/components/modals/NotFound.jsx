@@ -15,7 +15,7 @@ const NotFound = ({ onClose }) => (
         404 - Page Not Found
       </h2>
       <p className="mb-6 text-gray-600">
-        Oops! The page you’re looking for doesn’t exist or has been moved.
+        Oops! The page you're looking for doesn't exist or has been moved.
         <br />
         If you believe this is an error, please contact support.
       </p>
