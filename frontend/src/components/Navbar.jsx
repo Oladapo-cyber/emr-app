@@ -15,7 +15,7 @@ import { useState } from "react";
 const pageNames = {
   "/": "Home",
   "/patients": "Patients",
-  "/new-patient": "New Patient",
+  "/patients/new-patient": "New Patient",
   "/medical-records": "Medical Records",
   "/scheduling": "Scheduling",
   "/help": "Help",
