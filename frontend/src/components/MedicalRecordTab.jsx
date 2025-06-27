@@ -15,6 +15,7 @@ import {
 } from "@mui/icons-material";
 import RecordDetailModal from "./modals/RecordDetailModal";
 import EditRecordModal from "./modals/EditRecordModal";
+import { SearchOff, FilterAltOff } from "@mui/icons-material";
 
 // Sample medical records data for general hospital
 const medicalRecordsData = {
@@ -336,10 +337,12 @@ const MedicalRecordTab = ({ patientId }) => {
             // Keep your existing timeline view code
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
-                <LocalHospital className="text-blue-500" />
-                <span className="font-semibold text-lg">
-                  Medical History Timeline
+                <span className="bg-blue-100 p-1 rounded text-blue-500">
+                  <LocalHospital fontSize="small" />
                 </span>
+                <h3 className="text-lg font-medium">
+                  Medical History Timeline
+                </h3>
                 {currentRecord && (
                   <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                     Viewing: {currentRecord.id}
@@ -347,7 +350,7 @@ const MedicalRecordTab = ({ patientId }) => {
                 )}
               </div>
 
-              {records.length > 0 ? (
+              {filteredRecords.length > 0 ? (
                 <div className="space-y-5">
                   {filteredRecords.map((record) => (
                     <div
@@ -451,14 +454,29 @@ const MedicalRecordTab = ({ patientId }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center p-8 border rounded-lg">
-                  <LocalHospital
-                    className="mx-auto text-gray-300 mb-3"
-                    sx={{ fontSize: 40 }}
-                  />
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                  <div className="mb-4 flex justify-center">
+                    <span className="p-3 bg-gray-100 rounded-full text-gray-400">
+                      <SearchOff fontSize="large" />
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-700 mb-2">
+                    No Records Found
+                  </h4>
                   <p className="text-gray-500">
-                    No medical records found for this patient
+                    {activeFilter === "all"
+                      ? "This patient doesn't have any medical records yet."
+                      : `No ${activeFilter} records found for this patient.`}
                   </p>
+                  {activeFilter !== "all" && (
+                    <button
+                      className="mt-4 text-blue-600 hover:text-blue-700 hover:font-bold flex items-center gap-1 mx-auto"
+                      onClick={() => setActiveFilter("all")}
+                    >
+                      <FilterAltOff fontSize="small" />
+                      Clear filter
+                    </button>
+                  )}
                 </div>
               )}
             </div>
