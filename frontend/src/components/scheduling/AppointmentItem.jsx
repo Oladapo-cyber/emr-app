@@ -1,6 +1,7 @@
 import { AccessTime, Person, MoreVert } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
+import AppointmentActions from "./AppointmentActions";
 
 const AppointmentItem = ({ appointment, formatDate }) => {
   return (

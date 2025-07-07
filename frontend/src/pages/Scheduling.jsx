@@ -13,6 +13,7 @@ import {
   Check,
   Close,
 } from "@mui/icons-material";
+import DayCalendarView from "../components/scheduling/DayCalendarView";
 import { Link } from "react-router-dom";
 
 // Import components
@@ -354,6 +355,13 @@ const Scheduling = () => {
             <CalendarToday className="text-blue-500 mr-2" fontSize="small" />
             <h3 className="text-lg font-medium">Calendar</h3>
           </div>
+
+          {viewMode === "day" && (
+            <DayCalendarView
+              selectedDate={selectedDate}
+              appointments={appointments}
+            />
+          )}
 
           {viewMode === "month" && (
             <MonthCalendarView
