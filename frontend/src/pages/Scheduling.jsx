@@ -21,7 +21,7 @@ import StatusBadge from "../components/scheduling/StatusBadge";
 import AppointmentItem from "../components/scheduling/AppointmentItem";
 import MonthCalendarView from "../components/scheduling/MonthCalendarView";
 import WeekCalendarView from "../components/scheduling/WeekCalendarView";
-import StatCard from "../components/scheduling/StatCard";
+import StatCard from "../components/StatCard";
 import FilterBar from "../components/scheduling/FilterBar";
 import EmptyAppointments from "../components/scheduling/EmptyAppointments";
 import NewAppointmentModal from "../components/modals/NewAppointmentModal"; // Add this import
@@ -425,7 +425,7 @@ const Scheduling = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="Today's Appointments"
           value={
@@ -434,21 +434,25 @@ const Scheduling = () => {
             ).length
           }
           color="blue"
+          icon={<CalendarToday fontSize="small" />}
         />
         <StatCard
           title="Confirmed"
           value={appointments.filter((a) => a.status === "Confirmed").length}
           color="green"
+          icon={<Check fontSize="small" />}
         />
         <StatCard
           title="Pending"
           value={appointments.filter((a) => a.status === "Pending").length}
           color="yellow"
+          icon={<Schedule fontSize="small" />}
         />
         <StatCard
           title="Cancelled"
           value={appointments.filter((a) => a.status === "Cancelled").length}
           color="red"
+          icon={<Close fontSize="small" />}
         />
       </div>
 

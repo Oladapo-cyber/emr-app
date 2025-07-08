@@ -14,6 +14,7 @@ import {
   Email,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
+import StatCard from "../components/StatCard";
 
 // Sample patient data - would come from API in production
 const patientsList = [
@@ -320,38 +321,19 @@ const Patients = () => {
         )}
       </div>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            Total Patients
-          </div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">
-            {patients.length}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            Active Patients
-          </div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
-            {patients.filter((p) => p.status === "Active").length}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            New This Month
-          </div>
-          <div className="text-2xl font-bold text-blue-600 mt-1">2</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            With Appointments
-          </div>
-          <div className="text-2xl font-bold text-purple-600 mt-1">
-            {patients.filter((p) => p.upcomingAppt).length}
-          </div>
-        </div>
+        <StatCard title="Total Patients" value={patients.length} color="gray" />
+        <StatCard
+          title="Active Patients"
+          value={patients.filter((p) => p.status === "Active").length}
+          color="green"
+        />
+        <StatCard title="New This Month" value={2} color="blue" />
+        <StatCard
+          title="With Appointments"
+          value={patients.filter((p) => p.upcomingAppt).length}
+          color="purple"
+        />
       </div>
     </div>
   );

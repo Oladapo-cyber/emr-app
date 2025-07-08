@@ -13,6 +13,7 @@ import {
   LocalHospital,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
+import StatCard from "../components/StatCard";
 
 const medicalRecords = [
   {
@@ -301,38 +302,25 @@ const MedicalRecords = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            Total Records
-          </div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">
-            {records.length}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            Completed
-          </div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
-            {records.filter((r) => r.status === "Completed").length}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            In Progress
-          </div>
-          <div className="text-2xl font-bold text-yellow-600 mt-1">
-            {records.filter((r) => r.status === "In Progress").length}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">
-            Pending
-          </div>
-          <div className="text-2xl font-bold text-red-600 mt-1">
-            {records.filter((r) => r.status === "Pending").length}
-          </div>
-        </div>
+        <StatCard title="Total Records" value={records.length} color="gray" />
+
+        <StatCard
+          title="completed"
+          value={records.filter((r) => r.status === "Completed").length}
+          color="green"
+        />
+
+        <StatCard
+          title="in progress"
+          value={records.filter((r) => r.status === "In Progress").length}
+          color="yellow"
+        />
+
+        <StatCard
+          title="pending"
+          value={records.filter((r) => r.status === "Pending").length}
+          color="red"
+        />
       </div>
     </div>
   );

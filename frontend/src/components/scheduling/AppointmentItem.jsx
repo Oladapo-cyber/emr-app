@@ -1,9 +1,9 @@
-import { AccessTime, Person, MoreVert } from "@mui/icons-material";
+import { AccessTime, Person } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
 import AppointmentActions from "./AppointmentActions";
 
-const AppointmentItem = ({ appointment, formatDate }) => {
+const AppointmentItem = ({ appointment, formatDate, onEdit, onDelete }) => {
   return (
     <div className="p-4 hover:bg-gray-50 transition-colors">
       <div className="flex justify-between items-start">
@@ -44,9 +44,11 @@ const AppointmentItem = ({ appointment, formatDate }) => {
           >
             <Person fontSize="small" />
           </Link>
-          <button className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors">
-            <MoreVert fontSize="small" />
-          </button>
+          <AppointmentActions
+            appointment={appointment}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         </div>
       </div>
     </div>

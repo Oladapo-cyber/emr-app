@@ -1,4 +1,4 @@
-import { Edit, Delete, Close } from "@mui/icons-material";
+import { Edit, Delete } from "@mui/icons-material";
 
 const AppointmentActions = ({ appointment, onEdit, onDelete }) => {
   return (
