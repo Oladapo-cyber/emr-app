@@ -25,6 +25,7 @@ import StatCard from "../components/StatCard";
 import FilterBar from "../components/scheduling/FilterBar";
 import EmptyAppointments from "../components/scheduling/EmptyAppointments";
 import NewAppointmentModal from "../components/modals/NewAppointmentModal"; // Add this import
+import AdvancedSearch from "../components/scheduling/AdvancedSearch";
 
 const Scheduling = () => {
   // Sample data for calendar and appointments
@@ -34,6 +35,9 @@ const Scheduling = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [showModal, setShowModal] = useState(false); // Add this line
+
+  // Track which appointment is being edited
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
 
   // Convert appointments to state so we can add new ones
   const [appointments, setAppointments] = useState([
@@ -218,9 +222,47 @@ const Scheduling = () => {
   };
 
   // Handle saving a new appointment
-  const handleSaveAppointment = (newAppointment) => {
-    setAppointments([...appointments, newAppointment]);
+  const handleSaveAppointment = (appointmentData) => {
+    // Ensure date is a Date object
+    const appointmentWithDate = {
+      ...appointmentData,
+      date: new Date(appointmentData.date),
+    };
+
+    if (editingAppointmentId) {
+      setAppointments(
+        appointments.map((appointment) =>
+          appointment.id === editingAppointmentId
+            ? { ...appointmentWithDate, id: editingAppointmentId }
+            : appointment
+        )
+      );
+      setEditingAppointmentId(null);
+    } else {
+      setAppointments([...appointments, appointmentWithDate]);
+    }
+
     setShowModal(false);
+  };
+
+  // Handler for editing appointments
+  const handleEditAppointment = (appointment) => {
+    setEditingAppointmentId(appointment.id);
+    setShowModal(true);
+  };
+
+  // Handler for deleting appointments
+  const handleDeleteAppointment = (appointmentId) => {
+    if (window.confirm("Are you sure you want to cancel this appointment?")) {
+      setAppointments(appointments.filter((a) => a.id !== appointmentId));
+    }
+  };
+
+  // Handle advanced search
+  const handleAdvancedSearch = (params) => {
+    setSearch(params.term || "");
+    setFilterStatus(params.status || "All");
+    // Additional filtering logic could be implemented here
   };
 
   return (
@@ -340,12 +382,8 @@ const Scheduling = () => {
       </div>
 
       {/* Search and Filter Section */}
-      <FilterBar
-        search={search}
-        setSearch={setSearch}
-        filterStatus={filterStatus}
-        setFilterStatus={setFilterStatus}
-      />
+
+      <AdvancedSearch onSearch={handleAdvancedSearch} />
 
       {/* Calendar and Appointments View */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -411,6 +449,8 @@ const Scheduling = () => {
                   key={appointment.id}
                   appointment={appointment}
                   formatDate={formatDate}
+                  onEdit={handleEditAppointment}
+                  onDelete={handleDeleteAppointment}
                 />
               ))
             ) : (
@@ -460,8 +500,16 @@ const Scheduling = () => {
       {showModal && (
         <NewAppointmentModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            setEditingAppointmentId(null);
+          }}
           onSave={handleSaveAppointment}
+          appointmentToEdit={
+            editingAppointmentId
+              ? appointments.find((a) => a.id === editingAppointmentId)
+              : null
+          }
         />
       )}
     </div>

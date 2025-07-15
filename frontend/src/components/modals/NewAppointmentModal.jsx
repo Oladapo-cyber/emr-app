@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Close,
   CalendarToday,
@@ -9,7 +9,12 @@ import {
   Timer,
 } from "@mui/icons-material";
 
-const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
+const NewAppointmentModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  appointmentToEdit,
+}) => {
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
@@ -21,6 +26,26 @@ const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
     notes: "",
     status: "Confirmed",
   });
+
+  useEffect(() => {
+    if (appointmentToEdit) {
+      let dateValue = appointmentToEdit.date;
+      if (typeof dateValue === "string") {
+        dateValue = new Date(dateValue);
+      }
+      setFormData({
+        patientId: appointmentToEdit.patientId,
+        patientName: appointmentToEdit.patientName,
+        date: dateValue.toISOString().split("T")[0],
+        time: appointmentToEdit.time,
+        duration: appointmentToEdit.duration,
+        type: appointmentToEdit.type,
+        doctor: appointmentToEdit.doctor,
+        notes: appointmentToEdit.notes || "",
+        status: appointmentToEdit.status,
+      });
+    }
+  }, [appointmentToEdit]);
 
   // Sample data for dropdowns
   const doctors = [
@@ -52,6 +77,7 @@ const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
 
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handlePatientSearch = (searchTerm) => {
     const filtered = patients.filter((patient) =>
@@ -83,8 +109,38 @@ const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
     });
   };
 
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.patientName.trim()) {
+      errors.patientName = "Patient name is required";
+    }
+
+    if (!formData.date) {
+      errors.date = "Date is required";
+    } else {
+      const selectedDate = new Date(formData.date);
+      if (selectedDate < new Date().setHours(0, 0, 0, 0)) {
+        errors.date = "Cannot schedule appointments in the past";
+      }
+    }
+
+    // Add more validations as needed
+
+    return errors;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setErrors(errors);
+      // Handle form errors (e.g., show error messages)
+      return;
+    }
+
+    setErrors({}); // Clear errors if the form is valid
 
     // Create a date object from the form date and time
     const appointmentDate = new Date(`${formData.date}T${formData.time}`);
@@ -116,7 +172,7 @@ const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">
-            New Appointment
+            {appointmentToEdit ? "Edit Appointment" : "New Appointment"}
           </h2>
           <button
             onClick={onClose}
@@ -137,36 +193,19 @@ const NewAppointmentModal = ({ isOpen, onClose, onSave }) => {
                 Patient <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Person className="text-gray-400" fontSize="small" />
-                </div>
                 <input
                   type="text"
                   name="patientName"
                   value={formData.patientName}
                   onChange={handleChange}
-                  placeholder="Search patient by name"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  className={`block w-full pl-10 pr-3 py-2 border ${
+                    errors.patientName ? "border-red-500" : "border-gray-300"
+                  } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 />
-                {showPatientDropdown && (
-                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-                    {filteredPatients.length > 0 ? (
-                      filteredPatients.map((patient) => (
-                        <div
-                          key={patient.id}
-                          className="px-4 py-2 cursor-pointer hover:bg-blue-50"
-                          onClick={() => handlePatientSelect(patient)}
-                        >
-                          {patient.name} ({patient.id})
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-4 py-2 text-gray-500">
-                        No patients found
-                      </div>
-                    )}
-                  </div>
+                {errors.patientName && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.patientName}
+                  </p>
                 )}
               </div>
             </div>
