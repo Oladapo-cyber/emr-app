@@ -18,11 +18,9 @@ const pageNames = {
   "/patients/new-patient": "New Patient",
   "/medical-records": "Medical Records",
   "/scheduling": "Scheduling",
-  "/help": "Help",
   "/report": "Report",
   "/support": "Customer Support",
   "/staff": "Staff List",
-  "/reservations": "Reservations",
   "/settings": "Settings",
   "/login": "Login",
 };

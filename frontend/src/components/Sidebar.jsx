@@ -7,9 +7,7 @@ import {
   Settings,
   BadgeOutlined,
   PeopleAltOutlined,
-  EventNoteOutlined,
   Logout,
-  HelpOutlineOutlined,
   AssessmentOutlined,
 } from "@mui/icons-material";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -52,26 +50,6 @@ const Sidebar = () => {
       <h3 className="pl-2 text-gray-400 uppercase text-sm">Clinic</h3>
 
       <ul className="text-[#283747] my-2 border-b-2 border-gray-200 p-2">
-        <li className="pb-2">
-          <NavLink
-            to="/reservations"
-            className={({ isActive }) =>
-              `flex items-center gap-2 p-1.5 rounded-lg cursor-pointer whitespace-nowrap
-      hover:bg-[#e8f0fb] hover:text-[#4059e7] transition-colors
-      ${isActive ? "bg-[#e8f0fb] text-[#4059e7] font-semibold" : ""}`
-            }
-          >
-            <EventNoteOutlined
-              sx={{
-                fontSize: 28,
-                backgroundColor: "#e8f0fb",
-                borderRadius: "50%",
-                padding: "4px",
-              }}
-            />
-            Reservations
-          </NavLink>
-        </li>
         <li className="pb-2">
           <NavLink
             to={"/patients"}
@@ -196,26 +174,6 @@ const Sidebar = () => {
       <ul className="text-[#283747] mt-2 px-2">
         <li className="pb-2">
           <NavLink
-            to={"/help"}
-            className={({ isActive }) =>
-              `flex items-center gap-2 p-1.5 rounded-lg cursor-pointer whitespace-nowrap
-      hover:bg-[#e8f0fb] hover:text-[#4059e7] transition-colors
-      ${isActive ? "bg-[#e8f0fb] text-[#4059e7] font-semibold" : ""}`
-            }
-          >
-            <HelpOutlineOutlined
-              sx={{
-                fontSize: 28,
-                backgroundColor: "#e8f0fb",
-                borderRadius: "50%",
-                padding: "4px",
-              }}
-            />
-            Help
-          </NavLink>
-        </li>
-        <li className="pb-2">
-          <NavLink
             to={"/report"}
             className={({ isActive }) =>
               `flex items-center gap-2 p-1.5 rounded-lg cursor-pointer whitespace-nowrap
@@ -236,11 +194,11 @@ const Sidebar = () => {
         </li>
         <li className="pb-2">
           <NavLink
-            to={"/support"}
+            to="/support"
             className={({ isActive }) =>
               `flex items-center gap-2 p-1.5 rounded-lg cursor-pointer whitespace-nowrap
-      hover:bg-[#e8f0fb] hover:text-[#4059e7] transition-colors
-      ${isActive ? "bg-[#e8f0fb] text-[#4059e7] font-semibold" : ""}`
+hover:bg-[#e8f0fb] hover:text-[#4059e7] transition-colors
+${isActive ? "bg-[#e8f0fb] text-[#4059e7] font-semibold" : ""}`
             }
           >
             <SupportAgent
@@ -251,7 +209,7 @@ const Sidebar = () => {
                 padding: "4px",
               }}
             />
-            Customer Support
+            Help & Support
           </NavLink>
         </li>
       </ul>
