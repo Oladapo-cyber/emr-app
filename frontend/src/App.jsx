@@ -17,6 +17,7 @@ import Breadcrumbs from "./components/Breadcrumbs";
 import PatientDetails from "./components/PatientDetails";
 import CustomerSupport from "./pages/CustomerSupport";
 import NotFound from "./components/modals/NotFound";
+import Login from "./components/Login";
 
 function App() {
   const location = useLocation();
@@ -49,6 +50,7 @@ function App() {
               element={<PatientDetails />}
             />
             <Route path="/support" element={<CustomerSupport />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/404" element={null} />
             <Route
               path="*"
