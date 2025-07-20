@@ -11,12 +11,15 @@ import {
   AssessmentOutlined,
 } from "@mui/icons-material";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const handleLogout = () => {
-    localStorage.removeItem("emr-token");
-    navigate("/login");
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (
