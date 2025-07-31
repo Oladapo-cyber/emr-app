@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
@@ -19,8 +19,8 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
       lowercase: true,
+      trim: true,
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         "Please enter a valid email",
@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters"],
-      select: false, // Password mpt include in queries by default
+      select: false, // Password not included in queries by default
     },
 
     // Role-based Access Control
@@ -58,8 +58,8 @@ const userSchema = new mongoose.Schema(
     employeeId: {
       type: String,
       required: [true, "Employee ID is required"],
-      unique: true,
       trim: true,
+      uppercase: true, // Normalize employee IDs to uppercase
     },
     department: {
       type: String,
@@ -84,6 +84,7 @@ const userSchema = new mongoose.Schema(
         return ["doctor", "nurse", "pharmacist"].includes(this.role);
       },
       trim: true,
+      uppercase: true, // Normalize license numbers
     },
     specialization: {
       type: String,
@@ -97,6 +98,7 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: [true, "Phone number is required"],
+      trim: true,
       match: [/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"],
     },
 
@@ -121,6 +123,7 @@ const userSchema = new mongoose.Schema(
     loginAttempts: {
       type: Number,
       default: 0,
+      min: 0,
     },
     lockUntil: Date,
 
@@ -136,16 +139,27 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
+    toJSON: { 
+      virtuals: true,
+      transform: function(doc, ret) {
+        delete ret.password;
+        delete ret.passwordResetToken;
+        delete ret.emailVerificationToken;
+        return ret;
+      }
+    },
     toObject: { virtuals: true },
   }
 );
 
-// Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ employeeId: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ isActive: 1 });
+// Compound indexes for better performance
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ employeeId: 1 }, { unique: true });
+userSchema.index({ role: 1, isActive: 1 }); // Compound index for common queries
+userSchema.index({ department: 1, isActive: 1 }); // For department-based queries
+userSchema.index({ isActive: 1, lastLogin: -1 }); // For admin dashboards
+userSchema.index({ passwordResetToken: 1 }, { sparse: true }); // Sparse index for password reset
+userSchema.index({ emailVerificationToken: 1 }, { sparse: true }); // Sparse index for email verification
 
 // Virtual for full name
 userSchema.virtual("fullName").get(function () {
@@ -157,7 +171,7 @@ userSchema.virtual("isLocked").get(function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 
-// Hash password before saving
+// Pre-save middleware to hash password
 userSchema.pre("save", async function (next) {
   // Only hash if password is modified
   if (!this.isModified("password")) return next();
@@ -171,7 +185,7 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// Update lastLogin on successful login
+// Pre-save middleware to handle login success
 userSchema.pre("save", function (next) {
   if (this.isModified("lastLogin") && !this.isNew) {
     this.loginAttempts = 0;
@@ -204,6 +218,14 @@ userSchema.methods.incLoginAttempts = function () {
   }
 
   return this.updateOne(updates);
+};
+
+// Instance method to reset password attempt counters
+userSchema.methods.resetLoginAttempts = function () {
+  return this.updateOne({
+    $unset: { lockUntil: 1 },
+    $set: { loginAttempts: 0 },
+  });
 };
 
 // Instance method to check permissions
@@ -245,7 +267,7 @@ userSchema.methods.hasPermission = function (permission) {
 // Static method to find by credentials
 userSchema.statics.findByCredentials = async function (email, password) {
   const user = await this.findOne({
-    email: email.toLowerCase(),
+    email: email.toLowerCase().trim(),
     isActive: true,
   }).select("+password");
 
@@ -265,16 +287,49 @@ userSchema.statics.findByCredentials = async function (email, password) {
     throw new Error("Invalid email or password");
   }
 
-  // Update last login
+  // Update last login and reset login attempts
   user.lastLogin = new Date();
+  user.loginAttempts = 0;
+  user.lockUntil = undefined;
   await user.save();
 
   return user;
 };
 
 // Static method to get users by role
-userSchema.statics.findByRole = function (role) {
-  return this.find({ role, isActive: true }).select("-password");
+userSchema.statics.findByRole = function (role, includeInactive = false) {
+  const query = { role };
+  if (!includeInactive) {
+    query.isActive = true;
+  }
+  return this.find(query).select("-password");
+};
+
+// Static method to get users by department
+userSchema.statics.findByDepartment = function (department, includeInactive = false) {
+  const query = { department };
+  if (!includeInactive) {
+    query.isActive = true;
+  }
+  return this.find(query).select("-password");
+};
+
+// Static method to search users
+userSchema.statics.searchUsers = function (searchTerm, role = null, department = null) {
+  const query = {
+    isActive: true,
+    $or: [
+      { firstName: { $regex: searchTerm, $options: 'i' } },
+      { lastName: { $regex: searchTerm, $options: 'i' } },
+      { email: { $regex: searchTerm, $options: 'i' } },
+      { employeeId: { $regex: searchTerm, $options: 'i' } },
+    ],
+  };
+
+  if (role) query.role = role;
+  if (department) query.department = department;
+
+  return this.find(query).select("-password");
 };
 
 const User = mongoose.model("User", userSchema);
