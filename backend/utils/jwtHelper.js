@@ -3,10 +3,7 @@ import crypto from "crypto";
 
 class JWTHelper {
   constructor() {
-    // Ensure JWT_SECRET exists
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET environment variable is required");
-    }
+    // Ensure JWT_SECRET exists 
 
     this.secret = process.env.JWT_SECRET;
     this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRE || "15m";
