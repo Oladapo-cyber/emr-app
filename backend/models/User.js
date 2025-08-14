@@ -114,6 +114,9 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    lastLogout: {
+      type: Date,
+    },
 
     // Security
     passwordResetToken: String,
