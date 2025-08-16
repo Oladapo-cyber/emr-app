@@ -1,5 +1,9 @@
 import express from 'express';
 import { authenticate } from '../middlewares/auth.js';
+import { 
+  patientValidationRules,
+  patientIdValidation 
+} from '../middlewares/validation.js';
 import {
   createPatient,
   getPatients,
@@ -13,14 +17,14 @@ const router = express.Router();
 // Protect all routes
 router.use(authenticate);
 
-// Patient routes
+// Patient routes with validation
 router.route('/')
-  .post(createPatient)
+  .post(patientValidationRules, createPatient)
   .get(getPatients);
 
 router.route('/:id')
-  .get(getPatient)
-  .put(updatePatient)
-  .delete(deletePatient);
+  .get(patientIdValidation, getPatient)
+  .put([...patientIdValidation, ...patientValidationRules], updatePatient)
+  .delete(patientIdValidation, deletePatient);
 
 export default router;

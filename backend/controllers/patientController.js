@@ -1,4 +1,5 @@
 import Patient from '../models/Patient.js';
+import logger from '../utils/logger.js';
 
 // Create new patient
 export const createPatient = async (req, res, next) => {
@@ -9,8 +10,11 @@ export const createPatient = async (req, res, next) => {
     };
 
     const patient = await Patient.create(patientData);
+    logger.info(`New patient created: ${patient.patientId}`);
+
     res.status(201).json({
       success: true,
+      message: 'Patient created successfully',
       data: patient
     });
   } catch (error) {
@@ -18,10 +22,10 @@ export const createPatient = async (req, res, next) => {
   }
 };
 
-// Get all patients with basic search
+// Get all patients with search and pagination
 export const getPatients = async (req, res, next) => {
   try {
-    const { search } = req.query;
+    const { search, page = 1, limit = 10 } = req.query;
     let query = { isActive: true };
 
     if (search) {
@@ -36,14 +40,24 @@ export const getPatients = async (req, res, next) => {
       };
     }
 
-    const patients = await Patient.find(query)
-      .populate('primaryDoctor', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    const options = {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      sort: { createdAt: -1 },
+      populate: { path: 'primaryDoctor', select: 'firstName lastName' }
+    };
+
+    const patients = await Patient.find(query, null, options);
+    const total = await Patient.countDocuments(query);
 
     res.json({
       success: true,
+      message: 'Patients retrieved successfully',
+      data: patients,
       count: patients.length,
-      data: patients
+      total,
+      page: parseInt(page, 10),
+      totalPages: Math.ceil(total / parseInt(limit, 10))
     });
   } catch (error) {
     next(error);
@@ -65,6 +79,7 @@ export const getPatient = async (req, res, next) => {
 
     res.json({
       success: true,
+      message: 'Patient retrieved successfully',
       data: patient
     });
   } catch (error) {
@@ -77,7 +92,10 @@ export const updatePatient = async (req, res, next) => {
   try {
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
+      { 
+        ...req.body,
+        updatedBy: req.user._id 
+      },
       { new: true, runValidators: true }
     ).populate('primaryDoctor', 'firstName lastName');
 
@@ -88,8 +106,11 @@ export const updatePatient = async (req, res, next) => {
       });
     }
 
+    logger.info(`Patient updated: ${patient.patientId}`);
+
     res.json({
       success: true,
+      message: 'Patient updated successfully',
       data: patient
     });
   } catch (error) {
@@ -102,7 +123,10 @@ export const deletePatient = async (req, res, next) => {
   try {
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
-      { isActive: false },
+      { 
+        isActive: false,
+        updatedBy: req.user._id
+      },
       { new: true }
     );
 
@@ -112,6 +136,8 @@ export const deletePatient = async (req, res, next) => {
         message: 'Patient not found'
       });
     }
+
+    logger.info(`Patient deleted: ${patient.patientId}`);
 
     res.json({
       success: true,
