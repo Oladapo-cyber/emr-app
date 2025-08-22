@@ -8,7 +8,6 @@ export const ROLES = {
 export const STATUS = {
   ACTIVE: "active",
   INACTIVE: "inactive",
-  PENDING: "pending",
 };
 
 export const APPOINTMENT_STATUS = {
@@ -16,11 +15,6 @@ export const APPOINTMENT_STATUS = {
   COMPLETED: "completed",
   CANCELLED: "cancelled",
   NO_SHOW: "no_show",
-};
-
-export const JWT = {
-  ACCESS_TOKEN_EXPIRES: "1d",
-  REFRESH_TOKEN_EXPIRES: "7d",
 };
 
 export const MEDICAL_RECORD_TYPES = {
@@ -34,6 +28,5 @@ export default {
   ROLES,
   STATUS,
   APPOINTMENT_STATUS,
-  JWT,
   MEDICAL_RECORD_TYPES,
 };
