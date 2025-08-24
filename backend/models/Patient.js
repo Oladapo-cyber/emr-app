@@ -99,7 +99,6 @@ const patientSchema = new mongoose.Schema(
 );
 
 // Indexes
-patientSchema.index({ patientId: 1 });
 patientSchema.index({ email: 1 });
 patientSchema.index({ firstName: 1, lastName: 1 });
 
