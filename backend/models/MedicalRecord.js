@@ -99,6 +99,16 @@ const medicalRecordSchema = new mongoose.Schema(
       },
     ],
 
+    // Attachments  
+    attachments: [
+      {
+        filename: String,
+        path: String,
+        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+
     // Follow-up
     followUpRequired: {
       type: Boolean,

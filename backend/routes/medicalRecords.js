@@ -5,8 +5,11 @@ import {
   getMedicalRecords,
   getMedicalRecord,
   updateMedicalRecord,
-  deleteMedicalRecord
+  deleteMedicalRecord,
+  uploadSingleRecord,
+  uploadMultipleRecords
 } from '../controllers/medicalRecordController.js';
+import { uploadMedicalFile } from '../utils/fileUploads.js';
 
 const router = express.Router();
 
@@ -22,5 +25,20 @@ router.route('/:id')
   .get(getMedicalRecord)
   .put(authorize('doctor', 'nurse'), updateMedicalRecord)
   .delete(authorize('admin', 'doctor'), deleteMedicalRecord);
+
+// Upload routes
+router.post(
+  '/upload',
+  authorize('doctor', 'nurse'),
+  uploadMedicalFile.single('medicalFile'),
+  uploadSingleRecord
+);
+
+router.post(
+  '/upload-multiple',
+  authorize('doctor', 'nurse'),
+  uploadMedicalFile.array('medicalFiles', 5),
+  uploadMultipleRecords
+);
 
 export default router;

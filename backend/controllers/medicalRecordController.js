@@ -130,3 +130,72 @@ export const deleteMedicalRecord = async (req, res, next) => {
     next(error);
   }
 };
+
+// Upload a single medical record file
+export const uploadSingleRecord = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    // Save file reference into MongoDB
+    const record = await MedicalRecord.findByIdAndUpdate(
+      req.body.recordId, // Pass the record ID in the request body
+      {
+        $push: {
+          attachments: {
+            filename: req.file.filename,
+            path: req.file.path,
+            uploadedBy: req.user._id,
+            uploadedAt: new Date()
+          }
+        }
+      },
+      { new: true }
+    ).populate('patient attendingPhysician');
+
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      data: record
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload multiple medical record files
+export const uploadMultipleRecords = async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No files uploaded'
+      });
+    }
+
+    const attachments = req.files.map(file => ({
+      filename: file.filename,
+      path: file.path,
+      uploadedBy: req.user._id,
+      uploadedAt: new Date()
+    }));
+
+    const record = await MedicalRecord.findByIdAndUpdate(
+      req.body.recordId,
+      { $push: { attachments: { $each: attachments } } },
+      { new: true }
+    ).populate('patient attendingPhysician');
+
+    res.json({
+      success: true,
+      message: 'Files uploaded successfully',
+      data: record
+    });
+  } catch (error) {
+    next(error);
+  }
+};
