@@ -10,6 +10,7 @@ export const generateAccessToken = (user) => {
       email: user.email,
       role: user.role,
       fullName: user.fullName,
+      employeeId: user.employeeId, // ← Added employee ID to token payload
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRE }
