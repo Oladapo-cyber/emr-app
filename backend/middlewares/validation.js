@@ -1,5 +1,9 @@
 import { body, param, validationResult } from 'express-validator';
+import Appointment from '../models/Appointment.js';
+import { ROLES } from '../config/constants.js';
+import { isValidMongoId, isValidPhone, isValidEmail, isFutureDate, isValidTimeFormat, isStrongPassword } from '../utils/validation.js';
 
+// Core validation helper - processes validation results from express-validator
 export const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -12,100 +16,158 @@ export const validateRequest = (req, res, next) => {
   next();
 };
 
+// Parameter validation chains
+export const idValidation = {
+  validateId: (paramName = 'id') => [
+    param(paramName).custom(isValidMongoId).withMessage(`Invalid ${paramName} format`),
+    validateRequest
+  ],
+  patientIdValidation: [
+    param('id').custom(isValidMongoId).withMessage('Invalid patient ID format'),
+    validateRequest
+  ],
+  appointmentIdValidation: [
+    param('id').custom(isValidMongoId).withMessage('Invalid appointment ID format'),
+    validateRequest
+  ]
+};
+
+// Common field validators
+export const commonValidators = {
+  mongoIdParam: (field) => 
+    param(field).custom(value => {
+      const result = isValidMongoId(value);
+      if (!result.isValid) throw new Error(result.error);
+      return true;
+    }),
+
+  mongoIdBody: (field) => 
+    body(field).custom(value => {
+      const result = isValidMongoId(value);
+      if (!result.isValid) throw new Error(result.error);
+      return true;
+    }),
+
+  email: () =>
+    body('email')
+      .optional()
+      .trim()
+      .custom(value => {
+        const result = isValidEmail(value);
+        if (!result.isValid) throw new Error(result.error);
+        return true;
+      })
+      .normalizeEmail(),
+
+  phone: () =>
+    body('phone')
+      .notEmpty()
+      .withMessage('Phone number is required')
+      .custom(value => {
+        const result = isValidPhone(value);
+        if (!result.isValid) throw new Error(result.error);
+        return true;
+      }),
+
+  password: () =>
+    body('password')
+      .custom(value => {
+        const result = isStrongPassword(value);
+        if (!result.isValid) throw new Error(result.error);
+        return true;
+      })
+};
+
+// Healthcare specific validators
+export const healthcareValidators = {
+  appointmentDate: () =>
+    body('appointmentDate')
+      .isISO8601()
+      .withMessage('Invalid date format')
+      .custom(isFutureDate),
+  appointmentTime: () => [
+    body('appointmentTime.start').custom(isValidTimeFormat),
+    body('appointmentTime.end').custom(isValidTimeFormat)
+  ],
+  medicalRecordType: () =>
+    body('visitType')
+      .isIn(['routine_checkup', 'emergency', 'follow_up', 'consultation', 'procedure'])
+      .withMessage('Invalid visit type')
+};
+
+// Business logic validators 
+export const businessValidators = {
+  validateAppointmentConflict: async (req, res, next) => {
+    try {
+      const { provider, appointmentDate, appointmentTime } = req.body;
+      const existingAppointment = await Appointment.findOne({
+        provider, 
+        appointmentDate, 
+        'appointmentTime.start': appointmentTime.start,  
+        status: { $nin: ['cancelled', 'no_show'] },  
+        ...(req.params.id ? { _id: { $ne: req.params.id } } : {})
+      });
+      if (existingAppointment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Provider already has an appointment at this time'
+        });
+      }
+      next(); 
+    } catch (error) {
+      next(error);  
+    }
+  }
+};
+
+// Complete validation chains 
 export const patientValidationRules = [
-  body('firstName')
-    .trim()
-    .notEmpty()
-    .withMessage('First name is required')
-    .isLength({ max: 50 })
-    .withMessage('First name cannot exceed 50 characters'),
-    
-  body('lastName')
-    .trim()
-    .notEmpty()
-    .withMessage('Last name is required')
-    .isLength({ max: 50 })
-    .withMessage('Last name cannot exceed 50 characters'),
-    
+  commonValidators.requiredString('firstName'),
+  commonValidators.requiredString('lastName'),
   body('dateOfBirth')
     .notEmpty()
     .withMessage('Date of birth is required')
     .isISO8601()
     .withMessage('Invalid date format'),
-    
   body('gender')
     .notEmpty()
     .withMessage('Gender is required')
     .isIn(['male', 'female', 'other'])
     .withMessage('Invalid gender value'),
-    
-  body('phone')
-    .notEmpty()
-    .withMessage('Phone number is required')
-    .matches(/^\+?[\d\s\-\(\)]+$/)
-    .withMessage('Invalid phone number format'),
-    
-  body('email')
-    .optional()
-    .trim()
-    .isEmail()
-    .withMessage('Invalid email format'),
-    
+  commonValidators.phone(),
+  commonValidators.email(),
   validateRequest
 ];
 
-export const patientIdValidation = [
-  param('id')
-    .isMongoId()
-    .withMessage('Invalid patient ID format'),
-  validateRequest
-];
- 
 export const appointmentValidationRules = [
-  body('patient')
-    .isMongoId()
-    .withMessage('Valid patient ID is required'),
-    
-  body('provider')
-    .isMongoId()
-    .withMessage('Valid provider ID is required'),
-    
-  body('appointmentDate')
-    .isISO8601()
-    .withMessage('Valid appointment date is required'),
-    
-  body('appointmentTime.start')
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Valid start time required (HH:mm)'),
-    
-  body('appointmentTime.end')
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Valid end time required (HH:mm)'),
-    
+  commonValidators.mongoIdBody('patient'),
+  commonValidators.mongoIdBody('provider'),
+  healthcareValidators.appointmentDate(),
+  ...healthcareValidators.appointmentTime(),
   validateRequest
 ];
 
-// Add appointment conflict validation
-export const validateAppointmentConflict = async (req, res, next) => {
-  try {
-    const { provider, appointmentDate, appointmentTime } = req.body;
-    
-    const existingAppointment = await Appointment.findOne({
-      provider,
-      appointmentDate,
-      'appointmentTime.start': appointmentTime.start,
-      status: { $nin: ['cancelled', 'no_show'] }
-    });
+export const medicalRecordValidationRules = [
+  commonValidators.mongoIdBody('patient'),
+  healthcareValidators.medicalRecordType(),
+  body('diagnosis')
+    .notEmpty()
+    .withMessage('Diagnosis is required'),
+  body('treatment')
+    .notEmpty()
+    .withMessage('Treatment is required'),
+  validateRequest
+];
 
-    if (existingAppointment) {
-      return res.status(400).json({
-        success: false,
-        message: 'Provider already has an appointment at this time'
-      });
-    }
-    
-    next();
-  } catch (error) {
-    next(error);
-  }
-};
+export const staffValidationRules = [
+  commonValidators.requiredString('firstName'),
+  commonValidators.requiredString('lastName'),
+  commonValidators.email(),
+  commonValidators.phone(),
+  body('role')
+    .notEmpty()
+    .withMessage('Role is required')
+    .isIn(Object.values(ROLES))
+    .withMessage('Invalid role'),
+  validateRequest
+];
