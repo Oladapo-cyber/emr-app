@@ -1,5 +1,11 @@
 import express from 'express';
 import { authenticate } from '../middlewares/auth.js';
+import { 
+  appointmentValidationRules, 
+  idValidation,
+  businessValidators 
+} from '../middlewares/validation.js';
+
 import {
   createAppointment,
   getAppointments,
@@ -14,16 +20,22 @@ const router = express.Router();
 // Protect all routes
 router.use(authenticate);
 
-// Appointment routes
+// Add validation only to create and update operations
 router.route('/')
-  .post(createAppointment)
+  .post([
+    appointmentValidationRules,
+    businessValidators.validateAppointmentConflict
+  ], createAppointment)
   .get(getAppointments);
 
 router.get('/today', getTodaysAppointments);
 
 router.route('/:id')
-  .get(getAppointment)
-  .put(updateAppointment)
-  .delete(deleteAppointment);
-
+  .get(idValidation.validateId(), getAppointment)
+  .put([
+    idValidation.validateId(),
+    appointmentValidationRules,
+    businessValidators.validateAppointmentConflict
+  ], updateAppointment)
+  .delete(idValidation.validateId(), deleteAppointment);
 export default router;
