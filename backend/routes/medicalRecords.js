@@ -1,4 +1,5 @@
 import express from 'express';
+import { medicalRecordValidationRules } from '../middlewares/validation.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import {
   createMedicalRecord,
@@ -18,7 +19,7 @@ router.use(authenticate);
 
 // Medical record routes
 router.route('/')
-  .post(authorize('doctor', 'nurse'), createMedicalRecord)
+  .post(authorize('doctor', 'nurse'), medicalRecordValidationRules, createMedicalRecord)
   .get(getMedicalRecords);
 
 router.route('/:id')

@@ -23,8 +23,10 @@ router.route('/')
   .get(getPatients);
 
 router.route('/:id')
-  .get(patientIdValidation, getPatient)
-  .put([...patientIdValidation, ...patientValidationRules], updatePatient)
-  .delete(patientIdValidation, deletePatient);
-
+  .get(idValidation.patientIdValidation, getPatient)
+  .put([
+    idValidation.patientIdValidation,
+    patientValidationRules
+  ], updatePatient)
+  .delete(idValidation.patientIdValidation, deletePatient);
 export default router;
