@@ -45,10 +45,9 @@ const userSchema = new mongoose.Schema(
           "nurse",
           "receptionist",
           "lab_tech",
-          "pharmacist",
         ],
         message:
-          "Role must be one of: admin, doctor, nurse, receptionist, lab_tech, pharmacist",
+          "Role must be one of: admin, doctor, nurse, receptionist, lab_tech",
       },
       required: [true, "User role is required"],
       default: "receptionist",
@@ -71,8 +70,7 @@ const userSchema = new mongoose.Schema(
         "orthopedics",
         "general",
         "administration",
-        "laboratory",
-        "pharmacy",
+        "laboratory",  
       ],
       required: function () {
         return this.role !== "admin";
