@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticate, authorize, adminOnly } from '../middlewares/auth.js';
-import { staffValidationRules } from '../middlewares/validation.js';
+import { authenticate, adminOnly } from '../middlewares/auth.js';
+import { staffValidationRules, idValidation } from '../middlewares/validation.js';
 import {
   createStaff,
   getStaff,
@@ -17,14 +17,11 @@ router.use(authenticate);
 // Staff routes - Admin only for create/delete
 router.route('/')
   .post(adminOnly, staffValidationRules, createStaff)
-  .get(getStaff);
+  .get(adminOnly, getStaff);
 
 router.route('/:id')
-  .get(getStaffMember)
-  .put([
-    authorize('admin'),
-    staffValidationRules
-  ], updateStaff)
-  .delete(adminOnly, deleteStaff);
+  .get(adminOnly, idValidation.validateId(), getStaffMember)
+  .put(adminOnly, [idValidation.validateId(), staffValidationRules], updateStaff)
+  .delete(adminOnly, idValidation.validateId(), deleteStaff);
 
 export default router;

@@ -1,9 +1,6 @@
 import express from 'express';
-import { authenticate } from '../middlewares/auth.js';
-import { 
-  patientValidationRules,
-  patientIdValidation 
-} from '../middlewares/validation.js';
+import { authenticate, requirePermission } from '../middlewares/auth.js';
+import { patientValidationRules, idValidation } from '../middlewares/validation.js';
 import {
   createPatient,
   getPatients,
@@ -19,14 +16,16 @@ router.use(authenticate);
 
 // Patient routes with validation
 router.route('/')
-  .post(patientValidationRules, createPatient)
-  .get(getPatients);
+  .post(requirePermission('edit_patients'), patientValidationRules, createPatient)
+  .get(requirePermission('view_patients'), getPatients);
 
 router.route('/:id')
-  .get(idValidation.patientIdValidation, getPatient)
+  .get(requirePermission('view_patients'), idValidation.validateId(), getPatient)
   .put([
-    idValidation.patientIdValidation,
+    requirePermission('edit_patients'),
+    idValidation.validateId(),
     patientValidationRules
   ], updatePatient)
-  .delete(idValidation.patientIdValidation, deletePatient);
+  .delete(requirePermission('edit_patients'), idValidation.validateId(), deletePatient);
+
 export default router;
