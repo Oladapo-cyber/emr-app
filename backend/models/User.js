@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { ROLES } from '../config/constants.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -39,18 +40,11 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: {
-        values: [
-          "admin",
-          "doctor",
-          "nurse",
-          "receptionist",
-          "lab_tech",
-        ],
-        message:
-          "Role must be one of: admin, doctor, nurse, receptionist, lab_tech",
+        values: Object.values(ROLES),
+        message: `Role must be one of: ${Object.values(ROLES).join(', ')}`
       },
       required: [true, "User role is required"],
-      default: "receptionist",
+      default: ROLES.RECEPTIONIST
     },
 
     // Professional Information
