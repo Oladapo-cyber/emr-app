@@ -34,6 +34,14 @@ export const idValidation = {
 
 // Common field validators
 export const commonValidators = {
+  requiredString: (field, maxLength = 50) => 
+    body(field)
+      .trim()
+      .notEmpty()
+      .withMessage(`${field} is required`)
+      .isLength({ max: maxLength })
+      .withMessage(`${field} cannot exceed ${maxLength} characters`),
+
   mongoIdParam: (field) => 
     param(field).custom(value => {
       const result = isValidMongoId(value);
