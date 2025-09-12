@@ -63,70 +63,59 @@ export const register = async (req, res) => {
  */
 export const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body; 
+    // Change from identifier to email/employeeId
+    const { email, employeeId, password } = req.body;
 
-    if (!identifier || !password) {
+    if ((!email && !employeeId) || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Employee ID or Email and password are required.' 
+        message: 'Email/Employee ID and password are required.'
       });
     }
 
-    // Determine if identifier is email or employee ID
-    const isEmail = identifier.includes('@') && identifier.includes('.');
+    // Find user by email or employeeId
+    const user = await User.findOne({
+      $or: [
+        { email: email?.toLowerCase() },
+        { employeeId: employeeId?.toUpperCase() }
+      ]
+    }).select('+password');
+
+    if (!user || !(await user.comparePassword(password))) {
+      //Instance method for login attempts
+      if (user) {
+        await user.incLoginAttempts();
+      }
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Reset login attempts on successful login
+    await user.resetLoginAttempts();
     
-    // Build query based on identifier type
-    const query = isEmail 
-      ? { email: identifier.toLowerCase() }
-      : { employeeId: identifier.toUpperCase() };
-
-    // Find user
-    const user = await User.findOne(query)
-      .select('+password')
-      .populate('department', 'name');
-
-    if (!user) {
-      logger.warn(`Failed login attempt with ${isEmail ? 'email' : 'employeeId'}: ${identifier}`);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials.'
-      });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      logger.warn(`Failed password attempt for user: ${user.email} (${user.employeeId})`);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials.'
-      });
-    }
-
     // Generate token
     const token = jwtHelper.generateAccessToken(user);
 
-    // Remove password from response
-    const userResponse = user.toObject();
-    delete userResponse.password;
-
-    logger.info(`User logged in: ${user.email} (${user.employeeId}) via ${isEmail ? 'email' : 'employee ID'}`);
-
     res.json({
       success: true,
-      message: 'Login successful.',
+      message: 'Login successful',
       data: {
-        user: userResponse,
-        token
+        token,
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          employeeId: user.employeeId
+        }
       }
     });
-
   } catch (error) {
-    logger.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Login failed.'
-    });
+    next(error); // Global error handler
   }
 };
 
