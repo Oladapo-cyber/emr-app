@@ -12,6 +12,7 @@ import medicalRecordRoutes from "./routes/medicalRecords.js";
 import staffRoutes from "./routes/staff.js";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import { authLimiter, apiLimiter } from './middlewares/rateLimiter.js';
 
 dotenv.config();
 
@@ -24,12 +25,12 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/patients", patientRoutes);
-app.use("/api/appointments", appointmentRoutes);
-app.use("/api/medicalRecords", medicalRecordRoutes);
-app.use("/api/staff", staffRoutes);
+// API Routes with rate limiting
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/patients", apiLimiter, patientRoutes);
+app.use("/api/appointments", apiLimiter, appointmentRoutes);
+app.use("/api/medicalRecords", apiLimiter, medicalRecordRoutes);
+app.use("/api/staff", apiLimiter, staffRoutes);
 
 // 404 Not Found Handler
 app.use(notFoundHandler);
