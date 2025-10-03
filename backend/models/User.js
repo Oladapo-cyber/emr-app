@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { ROLES } from '../config/constants.js';
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
 const userSchema = new mongoose.Schema(
   {
     // Basic Information
@@ -48,6 +51,18 @@ const userSchema = new mongoose.Schema(
     },
 
     // Professional Information
+    
+    // Login Security
+    loginAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true
+    },
+    lockUntil: {
+      type: Date,
+      default: null
+    },
     employeeId: {
       type: String,
       required: [true, "Employee ID is required"],
@@ -207,9 +222,9 @@ userSchema.methods.incLoginAttempts = function () {
 
   const updates = { $inc: { loginAttempts: 1 } };
 
-  // Lock account after 5 failed attempts for 2 hours
-  if (this.loginAttempts + 1 >= 5 && !this.lockUntil) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
+  // Use the constant instead of hardcoded value
+  if (this.loginAttempts + 1 >= MAX_LOGIN_ATTEMPTS && !this.lockUntil) {
+    updates.$set = { lockUntil: Date.now() + LOCK_TIME }; // Use LOCK_TIME constant too
   }
 
   return this.updateOne(updates);

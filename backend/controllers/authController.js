@@ -61,7 +61,7 @@ export const register = async (req, res) => {
  * @route   POST /api/auth/login
  * @access  Public
  */
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   try {
     // Change from identifier to email/employeeId
     const { email, employeeId, password } = req.body;
@@ -81,6 +81,14 @@ export const login = async (req, res) => {
       ]
     }).select('+password');
 
+    // Check if account is locked
+    if (user?.isLocked) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is temporarily locked. Please try again later.'
+      });
+    }
+
     if (!user || !(await user.comparePassword(password))) {
       //Instance method for login attempts
       if (user) {
@@ -97,13 +105,23 @@ export const login = async (req, res) => {
     await user.resetLoginAttempts();
     
     // Generate token
-    const token = jwtHelper.generateAccessToken(user);
+    const accessToken = jwtHelper.generateAccessToken(user);
+    const refreshToken = jwtHelper.generateRefreshToken(user);
+
+    // Update user with refresh token and login time
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken,
+      lastLogin: new Date(),
+      loginAttempts: 0,
+      lockUntil: null
+    });
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        token,
+        accessToken,
+        refreshToken,
         user: {
           _id: user._id,
           firstName: user.firstName,
@@ -115,7 +133,7 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    next(error); // Global error handler
+    next(error);
   }
 };
 
@@ -211,9 +229,9 @@ export const changePassword = async (req, res) => {
 
   } catch (error) {
     logger.error('Change password error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error changing password.'
+      success: true,json({
+      message: 'Password changed successfully.'
+    });essage: 'Error changing password.'
     });
   }
 };
