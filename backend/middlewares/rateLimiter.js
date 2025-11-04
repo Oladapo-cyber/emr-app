@@ -1,6 +1,10 @@
 import rateLimit from 'express-rate-limit';
 import MongoStore from 'rate-limit-mongo';
 import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Auth routes limiter (login, register, password reset)
 export const authLimiter = rateLimit({

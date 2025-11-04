@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { ROLES } from '../config/constants.js';
+import { ROLES } from "../config/constants.js";
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
@@ -44,24 +44,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: Object.values(ROLES),
-        message: `Role must be one of: ${Object.values(ROLES).join(', ')}`
+        message: `Role must be one of: ${Object.values(ROLES).join(", ")}`,
       },
       required: [true, "User role is required"],
-      default: ROLES.RECEPTIONIST
+      default: ROLES.RECEPTIONIST,
     },
 
     // Professional Information
-    
+
     // Login Security
     loginAttempts: {
       type: Number,
       default: 0,
       min: 0,
-      required: true
+      required: true,
     },
     lockUntil: {
       type: Date,
-      default: null
+      default: null,
     },
     employeeId: {
       type: String,
@@ -79,7 +79,7 @@ const userSchema = new mongoose.Schema(
         "orthopedics",
         "general",
         "administration",
-        "laboratory",  
+        "laboratory",
       ],
       required: function () {
         return this.role !== "admin";
@@ -130,12 +130,7 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: Date,
     emailVerificationToken: String,
     emailVerificationExpires: Date,
-    loginAttempts: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    lockUntil: Date,
+    refreshToken: String,
 
     // Audit Trail
     createdBy: {
@@ -149,14 +144,14 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { 
+    toJSON: {
       virtuals: true,
-      transform: function(doc, ret) {
+      transform: function (doc, ret) {
         delete ret.password;
         delete ret.passwordResetToken;
         delete ret.emailVerificationToken;
         return ret;
-      }
+      },
     },
     toObject: { virtuals: true },
   }
@@ -238,39 +233,15 @@ userSchema.methods.resetLoginAttempts = function () {
   });
 };
 
-// Instance method to check permissions
+// Instance method to check permissions using centralized definitions
 userSchema.methods.hasPermission = function (permission) {
-  const rolePermissions = {
-    admin: ["all"],
-    doctor: [
-      "view_patients",
-      "edit_patients",
-      "view_medical_records",
-      "edit_medical_records",
-      "prescribe",
-      "view_appointments",
-      "manage_appointments",
-    ],
-    nurse: [
-      "view_patients",
-      "edit_patients",
-      "view_medical_records",
-      "edit_medical_records",
-      "view_appointments",
-    ],
-    receptionist: [
-      "view_patients",
-      "edit_patients",
-      "view_appointments",
-      "manage_appointments",
-    ],
-    lab_tech: ["view_patients", "view_medical_records", "edit_lab_results"],
-    pharmacist: ["view_patients", "view_prescriptions", "dispense_medication"],
-  };
+  // Import centralized role permissions from constants
+  const { ROLE_PERMISSIONS, PERMISSIONS } = require("../config/constants.js");
 
-  const userPermissions = rolePermissions[this.role] || [];
+  const userPermissions = ROLE_PERMISSIONS[this.role] || [];
   return (
-    userPermissions.includes("all") || userPermissions.includes(permission)
+    userPermissions.includes(PERMISSIONS.ALL) ||
+    userPermissions.includes(permission)
   );
 };
 
@@ -316,7 +287,10 @@ userSchema.statics.findByRole = function (role, includeInactive = false) {
 };
 
 // Static method to get users by department
-userSchema.statics.findByDepartment = function (department, includeInactive = false) {
+userSchema.statics.findByDepartment = function (
+  department,
+  includeInactive = false
+) {
   const query = { department };
   if (!includeInactive) {
     query.isActive = true;
@@ -325,14 +299,18 @@ userSchema.statics.findByDepartment = function (department, includeInactive = fa
 };
 
 // Static method to search users
-userSchema.statics.searchUsers = function (searchTerm, role = null, department = null) {
+userSchema.statics.searchUsers = function (
+  searchTerm,
+  role = null,
+  department = null
+) {
   const query = {
     isActive: true,
     $or: [
-      { firstName: { $regex: searchTerm, $options: 'i' } },
-      { lastName: { $regex: searchTerm, $options: 'i' } },
-      { email: { $regex: searchTerm, $options: 'i' } },
-      { employeeId: { $regex: searchTerm, $options: 'i' } },
+      { firstName: { $regex: searchTerm, $options: "i" } },
+      { lastName: { $regex: searchTerm, $options: "i" } },
+      { email: { $regex: searchTerm, $options: "i" } },
+      { employeeId: { $regex: searchTerm, $options: "i" } },
     ],
   };
 
