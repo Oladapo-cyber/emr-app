@@ -1,7 +1,7 @@
-import bcrypt from 'bcryptjs';
-import User from '../models/User.js';
-import jwtHelper from '../utils/jwtHelper.js';
-import logger from '../utils/logger.js';
+import bcrypt from "bcryptjs";
+import User from "../models/User.js";
+import jwtHelper from "../utils/jwtHelper.js";
+import logger from "../utils/logger.js";
 
 /**
  * @desc    Register new user (Admin only)
@@ -17,7 +17,7 @@ export const register = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email.'
+        message: "User already exists with this email.",
       });
     }
 
@@ -30,11 +30,10 @@ export const register = async (req, res) => {
       password: hashedPassword,
       role,
       department,
-      fullName: `${firstName} ${lastName}`
     });
 
     await user.save();
-    
+
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -43,15 +42,14 @@ export const register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully.',
-      data: { user: userResponse }
+      message: "User registered successfully.",
+      data: { user: userResponse },
     });
-
   } catch (error) {
-    logger.error('Registration error:', error);
+    logger.error("Registration error:", error);
     res.status(500).json({
       success: false,
-      message: 'Registration failed.'
+      message: "Registration failed.",
     });
   }
 };
@@ -63,29 +61,32 @@ export const register = async (req, res) => {
  */
 export const login = async (req, res, next) => {
   try {
-    // Change from identifier to email/employeeId
-    const { email, employeeId, password } = req.body;
+    // Handle both identifier (from frontend) and email/employeeId fields
+    const { identifier, email, employeeId, password } = req.body;
 
-    if ((!email && !employeeId) || !password) {
+    // Use identifier if provided, otherwise use email/employeeId
+    const loginField = identifier || email || employeeId;
+
+    if (!loginField || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email/Employee ID and password are required.'
+        message: "Email/Employee ID and password are required.",
       });
     }
 
-    // Find user by email or employeeId
+    // Find user by email or employeeId (handle both formats)
     const user = await User.findOne({
       $or: [
-        { email: email?.toLowerCase() },
-        { employeeId: employeeId?.toUpperCase() }
-      ]
-    }).select('+password');
+        { email: loginField.toLowerCase() },
+        { employeeId: loginField.toUpperCase() },
+      ],
+    }).select("+password");
 
     // Check if account is locked
     if (user?.isLocked) {
       return res.status(401).json({
         success: false,
-        message: 'Account is temporarily locked. Please try again later.'
+        message: "Account is temporarily locked. Please try again later.",
       });
     }
 
@@ -94,16 +95,16 @@ export const login = async (req, res, next) => {
       if (user) {
         await user.incLoginAttempts();
       }
-      
+
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
     // Reset login attempts on successful login
     await user.resetLoginAttempts();
-    
+
     // Generate token
     const accessToken = jwtHelper.generateAccessToken(user);
     const refreshToken = jwtHelper.generateRefreshToken(user);
@@ -113,12 +114,12 @@ export const login = async (req, res, next) => {
       refreshToken,
       lastLogin: new Date(),
       loginAttempts: 0,
-      lockUntil: null
+      lockUntil: null,
     });
 
     res.json({
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       data: {
         accessToken,
         refreshToken,
@@ -128,9 +129,9 @@ export const login = async (req, res, next) => {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
-          employeeId: user.employeeId
-        }
-      }
+          employeeId: user.employeeId,
+        },
+      },
     });
   } catch (error) {
     next(error);
@@ -144,22 +145,75 @@ export const login = async (req, res, next) => {
  */
 export const logout = async (req, res) => {
   try {
-    // Update last logout time
+    // Clear refresh token and update last logout time for security
     await User.findByIdAndUpdate(req.user._id, {
-      lastLogout: new Date()
+      lastLogout: new Date(),
+      refreshToken: null, // Clear refresh token on logout
     });
-    
+
     logger.info(`User logged out: ${req.user.email}`);
 
     res.json({
       success: true,
-      message: 'Logged out successfully.'
+      message: "Logged out successfully.",
     });
   } catch (error) {
-    logger.error('Logout error:', error);
+    logger.error("Logout error:", error);
     res.status(500).json({
       success: false,
-      message: 'Error during logout.'
+      message: "Error during logout.",
+    });
+  }
+};
+
+/**
+ * @desc    Refresh access token
+ * @route   POST /api/auth/refresh-token
+ * @access  Public
+ */
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token is required.",
+      });
+    }
+
+    // Verify refresh token
+    const decoded = jwtHelper.verifyRefreshToken(refreshToken);
+    const user = await User.findById(decoded.userId);
+
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token.",
+      });
+    }
+
+    // Generate new tokens
+    const newAccessToken = jwtHelper.generateAccessToken(user);
+    const newRefreshToken = jwtHelper.generateRefreshToken(user);
+
+    // Update user with new refresh token
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken: newRefreshToken,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
+    });
+  } catch (error) {
+    logger.error("Refresh token error:", error);
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired refresh token.",
     });
   }
 };
@@ -172,18 +226,18 @@ export const logout = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('-password')
-      .populate('department', 'name');
+      .select("-password")
+      .populate("department", "name");
 
     res.json({
       success: true,
-      data: { user }
+      data: { user },
     });
   } catch (error) {
-    logger.error('Get profile error:', error);
+    logger.error("Get profile error:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching profile.'
+      message: "Error fetching profile.",
     });
   }
 };
@@ -200,18 +254,21 @@ export const changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Current password and new password are required.'
+        message: "Current password and new password are required.",
       });
     }
 
-    const user = await User.findById(req.user._id).select('+password');
+    const user = await User.findById(req.user._id).select("+password");
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
         success: false,
-        message: 'Current password is incorrect.'
+        message: "Current password is incorrect.",
       });
     }
 
@@ -224,14 +281,13 @@ export const changePassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Password changed successfully.'
+      message: "Password changed successfully.",
     });
-
   } catch (error) {
-    logger.error('Change password error:', error);
-      success: true,json({
-      message: 'Password changed successfully.'
-    });essage: 'Error changing password.'
+    logger.error("Change password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error changing password.",
     });
   }
 };

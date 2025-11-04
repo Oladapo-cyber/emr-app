@@ -1,12 +1,12 @@
-import Patient from '../models/Patient.js';
-import logger from '../utils/logger.js';
+import Patient from "../models/Patient.js";
+import logger from "../utils/logger.js";
 
 // Create new patient
 export const createPatient = async (req, res, next) => {
   try {
     const patientData = {
       ...req.body,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     };
 
     const patient = await Patient.create(patientData);
@@ -14,8 +14,8 @@ export const createPatient = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Patient created successfully',
-      data: patient
+      message: "Patient created successfully",
+      data: patient,
     });
   } catch (error) {
     next(error);
@@ -32,32 +32,34 @@ export const getPatients = async (req, res, next) => {
       query = {
         isActive: true,
         $or: [
-          { firstName: { $regex: search, $options: 'i' } },
-          { lastName: { $regex: search, $options: 'i' } },
-          { patientId: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } }
-        ]
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { patientId: { $regex: search, $options: "i" } },
+          { phone: { $regex: search, $options: "i" } },
+        ],
       };
     }
 
-    const options = {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      sort: { createdAt: -1 },
-      populate: { path: 'primaryDoctor', select: 'firstName lastName' }
-    };
+    // Fix pagination logic - use skip and limit properly
+    const pageInt = Math.max(1, parseInt(page, 10));
+    const limitInt = Math.max(1, parseInt(limit, 10));
 
-    const patients = await Patient.find(query, null, options);
+    const patients = await Patient.find(query)
+      .populate("primaryDoctor", "firstName lastName")
+      .sort({ createdAt: -1 })
+      .skip((pageInt - 1) * limitInt)
+      .limit(limitInt);
+
     const total = await Patient.countDocuments(query);
 
     res.json({
       success: true,
-      message: 'Patients retrieved successfully',
+      message: "Patients retrieved successfully",
       data: patients,
       count: patients.length,
       total,
-      page: parseInt(page, 10),
-      totalPages: Math.ceil(total / parseInt(limit, 10))
+      page: pageInt,
+      totalPages: Math.ceil(total / limitInt),
     });
   } catch (error) {
     next(error);
@@ -67,20 +69,22 @@ export const getPatients = async (req, res, next) => {
 // Get single patient
 export const getPatient = async (req, res, next) => {
   try {
-    const patient = await Patient.findById(req.params.id)
-      .populate('primaryDoctor', 'firstName lastName');
+    const patient = await Patient.findById(req.params.id).populate(
+      "primaryDoctor",
+      "firstName lastName"
+    );
 
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: 'Patient not found'
+        message: "Patient not found",
       });
     }
 
     res.json({
       success: true,
-      message: 'Patient retrieved successfully',
-      data: patient
+      message: "Patient retrieved successfully",
+      data: patient,
     });
   } catch (error) {
     next(error);
@@ -92,17 +96,17 @@ export const updatePatient = async (req, res, next) => {
   try {
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         ...req.body,
-        updatedBy: req.user._id 
+        updatedBy: req.user._id,
       },
       { new: true, runValidators: true }
-    ).populate('primaryDoctor', 'firstName lastName');
+    ).populate("primaryDoctor", "firstName lastName");
 
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: 'Patient not found'
+        message: "Patient not found",
       });
     }
 
@@ -110,8 +114,8 @@ export const updatePatient = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Patient updated successfully',
-      data: patient
+      message: "Patient updated successfully",
+      data: patient,
     });
   } catch (error) {
     next(error);
@@ -123,9 +127,9 @@ export const deletePatient = async (req, res, next) => {
   try {
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         isActive: false,
-        updatedBy: req.user._id
+        updatedBy: req.user._id,
       },
       { new: true }
     );
@@ -133,7 +137,7 @@ export const deletePatient = async (req, res, next) => {
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: 'Patient not found'
+        message: "Patient not found",
       });
     }
 
@@ -141,7 +145,7 @@ export const deletePatient = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Patient deleted successfully'
+      message: "Patient deleted successfully",
     });
   } catch (error) {
     next(error);
