@@ -3,7 +3,8 @@ import { authenticate, requirePermission } from '../middlewares/auth.js';
 import { 
   appointmentValidationRules, 
   idValidation,
-  businessValidators 
+  businessValidators,
+  validateRequest
 } from '../middlewares/validation.js';
 import {
   createAppointment,
@@ -16,27 +17,28 @@ import {
 
 const router = express.Router();
 
-// Protect all routes
 router.use(authenticate);
 
 router.route('/')
-  .post([
+  .post(
     requirePermission('manage_appointments'),
     appointmentValidationRules,
-    businessValidators.validateAppointmentConflict
-  ], createAppointment)
+    businessValidators.validateAppointmentConflict,
+    createAppointment
+  )
   .get(requirePermission('view_appointments'), getAppointments);
 
 router.get('/today', requirePermission('view_appointments'), getTodaysAppointments);
 
 router.route('/:id')
-  .get(requirePermission('view_appointments'), idValidation.validateId(), getAppointment)
-  .put([
+  .get(requirePermission('view_appointments'), ...idValidation.validateId(), validateRequest, getAppointment)
+  .put(
     requirePermission('manage_appointments'),
-    idValidation.validateId(),
+    ...idValidation.validateId(),
     appointmentValidationRules,
-    businessValidators.validateAppointmentConflict
-  ], updateAppointment)
-  .delete(requirePermission('manage_appointments'), idValidation.validateId(), deleteAppointment);
+    businessValidators.validateAppointmentConflict,
+    updateAppointment
+  )
+  .delete(requirePermission('manage_appointments'), ...idValidation.validateId(), validateRequest, deleteAppointment);
 
 export default router;

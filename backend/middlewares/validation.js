@@ -16,19 +16,34 @@ export const validateRequest = (req, res, next) => {
   next();
 };
 
-// Parameter validation chains
+// Parameter validation chains - FIXED: Properly wrap validation result
 export const idValidation = {
   validateId: (paramName = 'id') => [
-    param(paramName).custom(isValidMongoId).withMessage(`Invalid ${paramName} format`),
-    validateRequest
+    param(paramName).custom((value) => {
+      const result = isValidMongoId(value);
+      if (!result.isValid) {
+        throw new Error(result.error || `Invalid ${paramName} format`);
+      }
+      return true;
+    })
   ],
   patientIdValidation: [
-    param('id').custom(isValidMongoId).withMessage('Invalid patient ID format'),
-    validateRequest
+    param('id').custom((value) => {
+      const result = isValidMongoId(value);
+      if (!result.isValid) {
+        throw new Error(result.error || 'Invalid patient ID format');
+      }
+      return true;
+    })
   ],
   appointmentIdValidation: [
-    param('id').custom(isValidMongoId).withMessage('Invalid appointment ID format'),
-    validateRequest
+    param('id').custom((value) => {
+      const result = isValidMongoId(value);
+      if (!result.isValid) {
+        throw new Error(result.error || 'Invalid appointment ID format');
+      }
+      return true;
+    })
   ]
 };
 
@@ -43,14 +58,14 @@ export const commonValidators = {
       .withMessage(`${field} cannot exceed ${maxLength} characters`),
 
   mongoIdParam: (field) => 
-    param(field).custom(value => {
+    param(field).custom((value) => {
       const result = isValidMongoId(value);
       if (!result.isValid) throw new Error(result.error);
       return true;
     }),
 
   mongoIdBody: (field) => 
-    body(field).custom(value => {
+    body(field).custom((value) => {
       const result = isValidMongoId(value);
       if (!result.isValid) throw new Error(result.error);
       return true;
@@ -60,7 +75,7 @@ export const commonValidators = {
     body('email')
       .optional()
       .trim()
-      .custom(value => {
+      .custom((value) => {
         const result = isValidEmail(value);
         if (!result.isValid) throw new Error(result.error);
         return true;
@@ -71,7 +86,7 @@ export const commonValidators = {
     body('phone')
       .notEmpty()
       .withMessage('Phone number is required')
-      .custom(value => {
+      .custom((value) => {
         const result = isValidPhone(value);
         if (!result.isValid) throw new Error(result.error);
         return true;
@@ -79,7 +94,7 @@ export const commonValidators = {
 
   password: () =>
     body('password')
-      .custom(value => {
+      .custom((value) => {
         const result = isStrongPassword(value);
         if (!result.isValid) throw new Error(result.error);
         return true;
@@ -92,10 +107,22 @@ export const healthcareValidators = {
     body('appointmentDate')
       .isISO8601()
       .withMessage('Invalid date format')
-      .custom(isFutureDate),
+      .custom((value) => {
+        const result = isFutureDate(value);
+        if (!result.isValid) throw new Error(result.error);
+        return true;
+      }),
   appointmentTime: () => [
-    body('appointmentTime.start').custom(isValidTimeFormat),
-    body('appointmentTime.end').custom(isValidTimeFormat)
+    body('appointmentTime.start').custom((value) => {
+      const result = isValidTimeFormat(value);
+      if (!result.isValid) throw new Error(result.error);
+      return true;
+    }),
+    body('appointmentTime.end').custom((value) => {
+      const result = isValidTimeFormat(value);
+      if (!result.isValid) throw new Error(result.error);
+      return true;
+    })
   ],
   medicalRecordType: () =>
     body('visitType')
@@ -128,7 +155,7 @@ export const businessValidators = {
   }
 };
 
-// Complete validation chains 
+// Complete validation chains - ADD validateRequest at the end
 export const patientValidationRules = [
   commonValidators.requiredString('firstName'),
   commonValidators.requiredString('lastName'),

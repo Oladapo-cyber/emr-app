@@ -3,17 +3,25 @@ import MongoStore from 'rate-limit-mongo';
 import logger from '../utils/logger.js';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-// Auth routes limiter (login, register, password reset)
+// Create store instances outside the limiter config
+const authStore = new MongoStore({
+  uri: process.env.MONGODB_URI,
+  collectionName: 'authRateLimits', // NO HYPHENS
+  expireTimeMs: 15 * 60 * 1000
+});
+
+const apiStore = new MongoStore({
+  uri: process.env.MONGODB_URI,
+  collectionName: 'apiRateLimits', // NO HYPHENS
+  expireTimeMs: 15 * 60 * 1000
+});
+
 export const authLimiter = rateLimit({
-  store: new MongoStore({
-    uri: process.env.MONGODB_URI,
-    collectionName: 'auth-rate-limits',
-  }),
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  store: authStore, // Use pre-created instance
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again later.'
@@ -24,14 +32,10 @@ export const authLimiter = rateLimit({
   }
 });
 
-// General API routes limiter
 export const apiLimiter = rateLimit({
-  store: new MongoStore({
-    uri: process.env.MONGODB_URI,
-    collectionName: 'api-rate-limits',
-  }),
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per windowMs
+  store: apiStore, // Use pre-created instance
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     success: false,
     message: 'Too many requests. Please try again later.'

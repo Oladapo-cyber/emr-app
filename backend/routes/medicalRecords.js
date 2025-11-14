@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticate, requirePermission } from '../middlewares/auth.js';
-import { medicalRecordValidationRules, idValidation } from '../middlewares/validation.js';
+import { medicalRecordValidationRules, idValidation, validateRequest } from '../middlewares/validation.js';
 import {
   createMedicalRecord,
   getMedicalRecords,
@@ -23,9 +23,9 @@ router.route('/')
   .get(requirePermission('view_medical_records'), getMedicalRecords);
 
 router.route('/:id')
-  .get(requirePermission('view_medical_records'), idValidation.validateId(), getMedicalRecord)
-  .put(requirePermission('edit_medical_records'), medicalRecordValidationRules, updateMedicalRecord)
-  .delete(requirePermission('edit_medical_records'), idValidation.validateId(), deleteMedicalRecord);
+  .get(requirePermission('view_medical_records'), ...idValidation.validateId(), validateRequest, getMedicalRecord)
+  .put(requirePermission('edit_medical_records'), ...idValidation.validateId(), medicalRecordValidationRules, updateMedicalRecord)
+  .delete(requirePermission('edit_medical_records'), ...idValidation.validateId(), validateRequest, deleteMedicalRecord);
 
 router.post(
   '/upload',
