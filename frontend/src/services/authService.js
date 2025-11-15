@@ -7,14 +7,23 @@ export const authService = {
    */
   login: async (identifier, password) => {
     try {
+      console.log('[AuthService] Login attempt:', { identifier });
+      
       const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
         identifier, // Send as "identifier" - backend handles both email/employeeId
         password
       });
 
+      console.log('[AuthService] Login response:', response.data);
+
       if (response.data?.success) {
         // ✅ FIXED: Backend returns "accessToken", not "token"
         const { accessToken, refreshToken, user } = response.data.data;
+
+        // Validate response data
+        if (!accessToken || !user) {
+          throw new Error('Invalid response from server: missing token or user data');
+        }
 
         // Store tokens with consistent keys
         localStorage.setItem('emr-token', accessToken);
@@ -23,11 +32,31 @@ export const authService = {
         if (refreshToken) {
           localStorage.setItem('emr-refresh-token', refreshToken);
         }
+
+        console.log('[AuthService] Login successful, tokens stored');
+      } else {
+        throw new Error(response.data?.message || 'Login failed');
       }
 
       return response.data;
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
+      console.error('[AuthService] Login error:', error);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Login failed';
+      
+      if (error.response) {
+        // Server responded with error
+        errorMessage = error.response.data?.message || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request made but no response
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Other errors
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
       throw new Error(errorMessage);
     }
   },
