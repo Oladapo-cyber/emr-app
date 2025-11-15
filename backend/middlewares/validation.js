@@ -16,7 +16,7 @@ export const validateRequest = (req, res, next) => {
   next();
 };
 
-// Parameter validation chains - FIXED: Properly wrap validation result
+// Parameter validation chains - All are now functions returning arrays
 export const idValidation = {
   validateId: (paramName = 'id') => [
     param(paramName).custom((value) => {
@@ -27,8 +27,8 @@ export const idValidation = {
       return true;
     })
   ],
-  patientIdValidation: [
-    param('id').custom((value) => {
+  patientIdValidation: (paramName = 'id') => [
+    param(paramName).custom((value) => {
       const result = isValidMongoId(value);
       if (!result.isValid) {
         throw new Error(result.error || 'Invalid patient ID format');
@@ -36,8 +36,8 @@ export const idValidation = {
       return true;
     })
   ],
-  appointmentIdValidation: [
-    param('id').custom((value) => {
+  appointmentIdValidation: (paramName = 'id') => [
+    param(paramName).custom((value) => {
       const result = isValidMongoId(value);
       if (!result.isValid) {
         throw new Error(result.error || 'Invalid appointment ID format');
