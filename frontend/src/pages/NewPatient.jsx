@@ -5,52 +5,56 @@ import PersonalInfoForm from "../components/PersonalInfoForm";
 import AddressForm from "../components/AddressForm";
 import EmergencyContactForm from "../components/EmergencyContactForm";
 import InsuranceForm from "../components/InsuranceForm";
+import patientService from "../services/patientService";
 
 const NewPatient = () => {
   const navigate = useNavigate();
 
   // Initialize form state with full structure
-  const [formData, setFormData] = useState({
-    personalInfo: {
-      firstName: "",
-      lastName: "",
-      dob: "",
-      gender: "Male",
-      phone: "",
-      email: "",
-      occupation: "",
-      maritalStatus: "Single",
-      language: "English",
-      ethnicity: "",
-    },
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "Nigeria",
-    },
-    emergencyContact: {
-      name: "",
-      relationship: "",
-      phone: "",
-    },
-    hasInsurance: true,
-    insurance: {
-      primary: {
-        provider: "",
-        policyNumber: "",
-        groupNumber: "",
-        policyHolder: "",
-        relationship: "Self",
-        effectiveDate: "",
-      },
-      secondary: null,
-    },
-  });
+const [formData, setFormData] = useState({
+  personalInfo: {
+    firstName: "",
+    lastName: "",
+    dob: "",
+    gender: "male",
+    phone: "",
+    email: "",
+    occupation: "",
+    maritalStatus: "single",
+    language: "English",
+    ethnicity: "",
+  },
+  address: {
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "Nigeria",
+  },
+  emergencyContact: {
+    name: "",
+    relationship: "",
+    phone: "",
+  },
+  hasInsurance: false,
+  // Single insurance object
+  insurance: {
+    provider: "",
+    policyNumber: "",
+    groupNumber: "",
+    policyHolder: "",
+    effectiveDate: "",
+    expirationDate: "",
+  },
+  // Simple allergy array
+  allergies: [],
+  bloodType: "",
+});
 
   const [errors, setErrors] = useState({});
   const [hasSecondaryInsurance, setHasSecondaryInsurance] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   // Handle regular form field changes
   const handleChange = (section, field, value) => {
@@ -95,82 +99,53 @@ const NewPatient = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required personal info fields
-    if (!formData.personalInfo.firstName.trim()) {
+    // Personal info validation
+    if (!formData.personalInfo.firstName?.trim()) {
       newErrors["personalInfo.firstName"] = "First name is required";
     }
-
-    if (!formData.personalInfo.lastName.trim()) {
+    if (!formData.personalInfo.lastName?.trim()) {
       newErrors["personalInfo.lastName"] = "Last name is required";
     }
 
     if (!formData.personalInfo.dob) {
       newErrors["personalInfo.dob"] = "Date of birth is required";
     }
-
-    if (!formData.personalInfo.phone.trim()) {
+    if (!formData.personalInfo.phone?.trim()) {
       newErrors["personalInfo.phone"] = "Phone number is required";
     }
-
-    // Email validation if provided
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (
-      formData.personalInfo.email &&
-      !emailRegex.test(formData.personalInfo.email)
-    ) {
-      newErrors["personalInfo.email"] = "Valid email is required";
+     if (formData.personalInfo.email?.trim() && !/\S+@\S+\.\S+/.test(formData.personalInfo.email)) {
+      newErrors["personalInfo.email"] = "Invalid email format";
     }
 
     // Address validation
-    if (!formData.address.street.trim()) {
+    if (!formData.address.street?.trim()) {
       newErrors["address.street"] = "Street address is required";
     }
-
-    if (!formData.address.city.trim()) {
+    if (!formData.address.city?.trim()) {
       newErrors["address.city"] = "City is required";
     }
-
-    if (!formData.address.state.trim()) {
+    if (!formData.address.state?.trim()) {
       newErrors["address.state"] = "State is required";
     }
 
-    // Emergency contact
-    if (!formData.emergencyContact.name.trim()) {
+    // Emergency contact validation
+    if (!formData.emergencyContact.name?.trim()) {
       newErrors["emergencyContact.name"] = "Emergency contact name is required";
     }
-
-    if (!formData.emergencyContact.phone.trim()) {
-      newErrors["emergencyContact.phone"] =
-        "Emergency contact phone is required";
+    if (!formData.emergencyContact.phone?.trim()) {
+      newErrors["emergencyContact.phone"] = "Emergency contact phone is required";
     }
 
-    // Insurance validation if enabled
+    // Single insurance validation
     if (formData.hasInsurance) {
-      if (!formData.insurance.primary.provider.trim()) {
-        newErrors["insurance.primary.provider"] = "Provider name is required";
+      if (!formData.insurance.provider?.trim()) {
+        newErrors["insurance.provider"] = "Provider name is required";
       }
-
-      if (!formData.insurance.primary.policyNumber.trim()) {
-        newErrors["insurance.primary.policyNumber"] =
-          "Policy number is required";
+      if (!formData.insurance.policyNumber?.trim()) {
+        newErrors["insurance.policyNumber"] = "Policy number is required";
       }
-
-      if (!formData.insurance.primary.policyHolder.trim()) {
-        newErrors["insurance.primary.policyHolder"] =
-          "Policy holder name is required";
-      }
-
-      // Secondary insurance validation if added
-      if (hasSecondaryInsurance && formData.insurance.secondary) {
-        if (!formData.insurance.secondary.provider?.trim()) {
-          newErrors["insurance.secondary.provider"] =
-            "Provider name is required";
-        }
-
-        if (!formData.insurance.secondary.policyNumber?.trim()) {
-          newErrors["insurance.secondary.policyNumber"] =
-            "Policy number is required";
-        }
+      if (!formData.insurance.policyHolder?.trim()) {
+        newErrors["insurance.policyHolder"] = "Policy holder name is required";
       }
     }
 
@@ -208,26 +183,60 @@ const NewPatient = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (validateForm()) {
-      // In a real app, you would send this data to your API
-      console.log("Form submitted:", formData);
-
-      // Generate a random patient ID for demo purposes
-      const patientId = `P${Math.floor(1000 + Math.random() * 9000)}`;
-
-      // Navigate to the patient details page with the new ID
-      navigate(
-        `/patients/patient-details?id=${patientId}&tab=Patient Information`
-      );
-    } else {
-      // Scroll to the first error
+    if (!validateForm()) {
       const firstError = document.querySelector(".error-message");
       if (firstError) {
         firstError.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      // Transform form data to match simplified backend schema
+      const patientData = {
+        firstName: formData.personalInfo.firstName,
+        lastName: formData.personalInfo.lastName,
+        dateOfBirth: formData.personalInfo.dob,
+        gender: formData.personalInfo.gender,
+        phone: formData.personalInfo.phone,
+        email: formData.personalInfo.email,
+        occupation: formData.personalInfo.occupation,
+        maritalStatus: formData.personalInfo.maritalStatus,
+        language: formData.personalInfo.language,
+        ethnicity: formData.personalInfo.ethnicity,
+        address: {
+          street: formData.address.street,
+          city: formData.address.city,
+          state: formData.address.state,
+          zipCode: formData.address.zipCode,
+          country: formData.address.country,
+        },
+        emergencyContact: {
+          name: formData.emergencyContact.name,
+          relationship: formData.emergencyContact.relationship,
+          phone: formData.emergencyContact.phone,
+        },
+        // Single insurance object
+        insurance: formData.hasInsurance ? formData.insurance : undefined,
+        // Allergy array
+        allergies: formData.allergies || [],
+        bloodType: formData.bloodType || undefined,
+      };
+
+      const response = await patientService.createPatient(patientData);
+      navigate(`/patients/patient-details?id=${response.data._id}`);
+    } catch (err) {
+      console.error("Failed to create patient:", err);
+      setError(err.message || "Failed to create patient. Please try again.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
