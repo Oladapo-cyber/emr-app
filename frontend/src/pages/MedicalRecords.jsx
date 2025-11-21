@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar } from "@mui/material";
 import {
   Search,
@@ -14,45 +14,7 @@ import {
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import StatCard from "../components/StatCard";
-
-const medicalRecords = [
-  {
-    id: "MR001",
-    patientName: "Willie Jennie",
-    patientId: "P001",
-    recordType: "Consultation",
-    diagnosis: "Dental Caries",
-    treatment: "Tooth Filling",
-    doctor: "Dr. Soap Mactavish",
-    date: "2024-01-15",
-    status: "Completed",
-    notes: "Advanced decay treatment completed successfully",
-  },
-  {
-    id: "MR002",
-    patientName: "Christopher Smallwood",
-    patientId: "P002",
-    recordType: "Surgery",
-    diagnosis: "Impacted Wisdom Tooth",
-    treatment: "Tooth Extraction",
-    doctor: "Dr. Sarah Johnson",
-    date: "2024-01-12",
-    status: "In Progress",
-    notes: "Post-operative care required",
-  },
-  {
-    id: "MR003",
-    patientName: "Maria Garcia",
-    patientId: "P003",
-    recordType: "Preventive",
-    diagnosis: "Routine Checkup",
-    treatment: "Cleaning & Examination",
-    doctor: "Dr. Mike Wilson",
-    date: "2024-01-10",
-    status: "Completed",
-    notes: "No issues found, next appointment in 6 months",
-  },
-];
+import { medicalRecordService } from "../services";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -83,23 +45,121 @@ const getRecordTypeIcon = (type) => {
 const MedicalRecords = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
-  const [records, setRecords] = useState(medicalRecords);
+  const [filterType, setFilterType] = useState("All");
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
 
-  const filteredRecords = records.filter((record) => {
-    const matchesSearch =
-      record.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      record.diagnosis.toLowerCase().includes(search.toLowerCase()) ||
-      record.treatment.toLowerCase().includes(search.toLowerCase()) ||
-      record.doctor.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    fetchMedicalRecords();
+  }, [search, filterStatus, filterType, page]);
 
-    const matchesFilter =
-      filterStatus === "All" || record.status === filterStatus;
+  const fetchMedicalRecords = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await medicalRecordService.getMedicalRecords({
+        type: filterType === 'All' ? undefined : filterType.toLowerCase().replace(' ', '_'),
+        page,
+        limit: 10
+      });
 
-    return matchesSearch && matchesFilter;
-  });
+      // Transform API data to match component format
+      const transformedRecords = (response.data || []).map(record => ({
+        id: record._id,
+        patientName: `${record.patient?.firstName || ''} ${record.patient?.lastName || ''}`,
+        patientId: record.patient?._id || record.patient,
+        recordType: formatRecordType(record.visitType),
+        diagnosis: record.diagnosis || 'N/A',
+        treatment: record.treatment || 'N/A',
+        doctor: `${record.attendingPhysician?.firstName || 'Dr.'} ${record.attendingPhysician?.lastName || 'Unknown'}`,
+        date: record.visitDate || record.createdAt,
+        status: record.status ? capitalizeFirstLetter(record.status) : 'Completed',
+        notes: record.notes || ''
+      }));
+
+      // Filter by search and status
+      let filteredData = transformedRecords;
+      if (search) {
+        filteredData = transformedRecords.filter(record =>
+          record.patientName.toLowerCase().includes(search.toLowerCase()) ||
+          record.diagnosis.toLowerCase().includes(search.toLowerCase()) ||
+          record.treatment.toLowerCase().includes(search.toLowerCase()) ||
+          record.doctor.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      if (filterStatus !== 'All') {
+        filteredData = filteredData.filter(record => record.status === filterStatus);
+      }
+
+      setRecords(filteredData);
+      setTotal(response.total || 0);
+      setTotalPages(response.totalPages || 0);
+
+    } catch (err) {
+      console.error('Failed to fetch medical records:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRecordType = (type) => {
+    if (!type) return 'Consultation';
+    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const capitalizeFirstLetter = (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const filteredRecords = records;
+
+  // Export records
+  const handleExport = () => {
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "ID,Patient,Type,Diagnosis,Treatment,Doctor,Date,Status\n"
+      + records.map(r => 
+        `${r.id},${r.patientName},${r.recordType},${r.diagnosis},${r.treatment},${r.doctor},${r.date},${r.status}`
+      ).join("\n");
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `medical_records_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Loading state
+  if (loading && page === 1) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">Failed to load medical records: {error}</p>
+          <button 
+            onClick={fetchMedicalRecords}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Medical Records</h1>
@@ -108,14 +168,20 @@ const MedicalRecords = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             <GetApp fontSize="small" />
             Export
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <Link 
+            to="/medical-records/new"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <FolderOpen fontSize="small" />
             New Record
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -125,7 +191,10 @@ const MedicalRecords = () => {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search records, patients, diagnoses..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
           />
@@ -139,8 +208,25 @@ const MedicalRecords = () => {
           <div className="flex items-center gap-2">
             <FilterList fontSize="small" className="text-gray-500" />
             <select
+              value={filterType}
+              onChange={(e) => {
+                setFilterType(e.target.value);
+                setPage(1);
+              }}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="All">All Types</option>
+              <option value="Consultation">Consultation</option>
+              <option value="Surgery">Surgery</option>
+              <option value="Preventive">Preventive</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+            <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setPage(1);
+              }}
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <option value="All">All Status</option>
@@ -285,7 +371,7 @@ const MedicalRecords = () => {
           </table>
         </div>
 
-        {filteredRecords.length === 0 && (
+        {filteredRecords.length === 0 && !loading && (
           <div className="text-center py-12">
             <FolderOpen
               className="mx-auto text-gray-300 mb-4"
@@ -295,14 +381,47 @@ const MedicalRecords = () => {
               No records found
             </h3>
             <p className="text-gray-500">
-              Try adjusting your search or filter criteria
+              {search || filterStatus !== 'All' || filterType !== 'All'
+                ? 'Try adjusting your search or filter criteria'
+                : 'No medical records available yet'
+              }
             </p>
           </div>
         )}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
+          <div className="text-sm text-gray-700">
+            Showing <span className="font-medium">{(page - 1) * 10 + 1}</span> to{" "}
+            <span className="font-medium">{Math.min(page * 10, total)}</span> of{" "}
+            <span className="font-medium">{total}</span> records
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="Total Records" value={records.length} color="gray" />
+        <StatCard title="Total Records" value={total} color="gray" />
 
         <StatCard
           title="completed"
