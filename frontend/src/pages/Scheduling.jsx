@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarToday,
   Today,
@@ -24,114 +24,130 @@ import WeekCalendarView from "../components/scheduling/WeekCalendarView";
 import StatCard from "../components/StatCard";
 import FilterBar from "../components/scheduling/FilterBar";
 import EmptyAppointments from "../components/scheduling/EmptyAppointments";
-import NewAppointmentModal from "../components/modals/NewAppointmentModal"; // Add this import
+import NewAppointmentModal from "../components/modals/NewAppointmentModal";
 import AdvancedSearch from "../components/scheduling/AdvancedSearch";
+import { appointmentService } from "../services";
 
 const Scheduling = () => {
-  // Sample data for calendar and appointments
+  // State management
   const currentDate = new Date();
   const [selectedDate, setSelectedDate] = useState(currentDate);
   const [viewMode, setViewMode] = useState("day"); // day, week, month
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
-  const [showModal, setShowModal] = useState(false); // Add this line
-
-  // Track which appointment is being edited
+  const [showModal, setShowModal] = useState(false);
   const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+  
+  // Data states
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Stats
+  const [stats, setStats] = useState({
+    today: 0,
+    confirmed: 0,
+    pending: 0,
+    cancelled: 0
+  });
 
-  // Convert appointments to state so we can add new ones
-  const [appointments, setAppointments] = useState([
-    {
-      id: "A001",
-      patientName: "Willie Jennie",
-      patientId: "P001",
-      time: "09:30",
-      duration: 30, // in minutes
-      date: new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate(),
-        9,
-        30
-      ),
-      type: "Consultation",
-      doctor: "Dr. Soap Mactavish",
-      notes: "Follow-up on hypertension medication",
-      status: "Confirmed",
-    },
-    {
-      id: "A002",
-      patientName: "Christopher Smallwood",
-      patientId: "P002",
-      time: "11:15",
-      duration: 45,
-      date: new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate(),
-        11,
-        15
-      ),
-      type: "Follow-up",
-      doctor: "Dr. Sarah Johnson",
-      notes: "Post-operative checkup",
-      status: "Confirmed",
-    },
-    {
-      id: "A003",
-      patientName: "Maria Garcia",
-      patientId: "P003",
-      time: "14:00",
-      duration: 60,
-      date: new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate() + 1,
-        14,
-        0
-      ),
-      type: "Examination",
-      doctor: "Dr. Emily Wilson",
-      notes: "Annual physical",
-      status: "Pending",
-    },
-    {
-      id: "A004",
-      patientName: "Robert Johnson",
-      patientId: "P004",
-      time: "15:30",
-      duration: 30,
-      date: new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate() + 2,
-        15,
-        30
-      ),
-      type: "Consultation",
-      doctor: "Dr. Soap Mactavish",
-      notes: "Headache and dizziness",
-      status: "Confirmed",
-    },
-    {
-      id: "A005",
-      patientName: "Emma Wilson",
-      patientId: "P005",
-      time: "10:00",
-      duration: 45,
-      date: new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate() - 1,
-        10,
-        0
-      ),
-      type: "Follow-up",
-      doctor: "Dr. Sarah Johnson",
-      notes: "Review lab results",
-      status: "Completed",
-    },
-  ]);
+  // Fetch appointments on mount and when filters change
+  useEffect(() => {
+    fetchAppointments();
+  }, [selectedDate, viewMode, search, filterStatus]);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let response;
+      
+      if (viewMode === "day") {
+        // Fetch appointments for selected day
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        response = await appointmentService.getAppointments({
+          date: dateStr,
+          status: filterStatus === 'All' ? undefined : filterStatus.toLowerCase(),
+          limit: 100
+        });
+      } else if (viewMode === "week") {
+        // Fetch appointments for the week
+        const startDate = new Date(selectedDate);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        
+        response = await appointmentService.getAppointmentsByDateRange(
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0]
+        );
+      } else {
+        // Fetch appointments for the month
+        const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+        
+        response = await appointmentService.getAppointmentsByDateRange(
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0]
+        );
+      }
+
+      // Transform API data to match component format
+      const transformedAppointments = (response.data || []).map(appt => ({
+        id: appt._id,
+        patientName: `${appt.patient?.firstName || ''} ${appt.patient?.lastName || ''}`,
+        patientId: appt.patient?._id || appt.patient,
+        time: appt.appointmentTime?.start || '',
+        duration: appt.duration || 30,
+        date: new Date(appt.appointmentDate),
+        type: formatAppointmentType(appt.appointmentType),
+        doctor: `${appt.provider?.firstName || 'Dr.'} ${appt.provider?.lastName || 'Unknown'}`,
+        notes: appt.reasonForVisit || '',
+        status: capitalizeFirstLetter(appt.status)
+      }));
+
+      // Filter by search term if provided
+      let filteredData = transformedAppointments;
+      if (search) {
+        filteredData = transformedAppointments.filter(appt =>
+          appt.patientName.toLowerCase().includes(search.toLowerCase()) ||
+          appt.doctor.toLowerCase().includes(search.toLowerCase()) ||
+          appt.type.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      setAppointments(filteredData);
+      
+      // Calculate stats
+      const today = new Date().toDateString();
+      setStats({
+        today: filteredData.filter(a => a.date.toDateString() === today).length,
+        confirmed: filteredData.filter(a => a.status === 'Confirmed').length,
+        pending: filteredData.filter(a => a.status === 'Pending').length,
+        cancelled: filteredData.filter(a => a.status === 'Cancelled').length
+      });
+
+    } catch (err) {
+      console.error('Failed to fetch appointments:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper functions
+  const formatAppointmentType = (type) => {
+    if (!type) return 'Consultation';
+    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const capitalizeFirstLetter = (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+
 
   // Generate dates for the calendar view
   const getDatesForView = () => {
@@ -222,27 +238,24 @@ const Scheduling = () => {
   };
 
   // Handle saving a new appointment
-  const handleSaveAppointment = (appointmentData) => {
-    // Ensure date is a Date object
-    const appointmentWithDate = {
-      ...appointmentData,
-      date: new Date(appointmentData.date),
-    };
-
-    if (editingAppointmentId) {
-      setAppointments(
-        appointments.map((appointment) =>
-          appointment.id === editingAppointmentId
-            ? { ...appointmentWithDate, id: editingAppointmentId }
-            : appointment
-        )
-      );
-      setEditingAppointmentId(null);
-    } else {
-      setAppointments([...appointments, appointmentWithDate]);
+  const handleSaveAppointment = async (appointmentData) => {
+    try {
+      if (editingAppointmentId) {
+        // Update existing appointment
+        await appointmentService.updateAppointment(editingAppointmentId, appointmentData);
+        setEditingAppointmentId(null);
+      } else {
+        // Create new appointment
+        await appointmentService.createAppointment(appointmentData);
+      }
+      
+      // Refresh appointments list
+      await fetchAppointments();
+      setShowModal(false);
+    } catch (err) {
+      console.error('Failed to save appointment:', err);
+      alert(`Failed to save appointment: ${err.message}`);
     }
-
-    setShowModal(false);
   };
 
   // Handler for editing appointments
@@ -252,9 +265,16 @@ const Scheduling = () => {
   };
 
   // Handler for deleting appointments
-  const handleDeleteAppointment = (appointmentId) => {
+  const handleDeleteAppointment = async (appointmentId) => {
     if (window.confirm("Are you sure you want to cancel this appointment?")) {
-      setAppointments(appointments.filter((a) => a.id !== appointmentId));
+      try {
+        await appointmentService.cancelAppointment(appointmentId, "Cancelled by user");
+        // Refresh appointments list
+        await fetchAppointments();
+      } catch (err) {
+        console.error('Failed to cancel appointment:', err);
+        alert(`Failed to cancel appointment: ${err.message}`);
+      }
     }
   };
 
@@ -265,8 +285,30 @@ const Scheduling = () => {
     // Additional filtering logic could be implemented here
   };
 
+  // Loading state
+  if (loading && appointments.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">Failed to load appointments: {error}</p>
+          <button 
+            onClick={fetchAppointments}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -276,7 +318,10 @@ const Scheduling = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => setSelectedDate(new Date())}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             <Today fontSize="small" />
             Today
           </button>
@@ -468,29 +513,25 @@ const Scheduling = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="Today's Appointments"
-          value={
-            appointments.filter(
-              (a) => a.date.toDateString() === new Date().toDateString()
-            ).length
-          }
+          value={stats.today}
           color="blue"
           icon={<CalendarToday fontSize="small" />}
         />
         <StatCard
           title="Confirmed"
-          value={appointments.filter((a) => a.status === "Confirmed").length}
+          value={stats.confirmed}
           color="green"
           icon={<Check fontSize="small" />}
         />
         <StatCard
           title="Pending"
-          value={appointments.filter((a) => a.status === "Pending").length}
+          value={stats.pending}
           color="yellow"
           icon={<Schedule fontSize="small" />}
         />
         <StatCard
           title="Cancelled"
-          value={appointments.filter((a) => a.status === "Cancelled").length}
+          value={stats.cancelled}
           color="red"
           icon={<Close fontSize="small" />}
         />

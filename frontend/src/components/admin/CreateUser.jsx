@@ -1,5 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import { useAuth } from "../../hooks/useAuth";
+import { userService } from "../../services";
 import {
   TextField,
   Button,
@@ -10,44 +11,60 @@ import {
 } from "@mui/material";
 
 const CreateUser = () => {
+  const { user } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [department, setDepartment] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const token = localStorage.getItem("token"); // Get the JWT token (ensure admin is logged in)
-    if (!token) return alert("You must be logged in as admin");
+    
+    // Ensure user is admin
+    if (user?.role !== "admin") {
+      return setErrorMessage("You must be logged in as admin");
+    }
 
     // Form Validation
     if (!username || !password || !role || !fullName) {
       return setErrorMessage("All fields are required!");
     }
 
+    setSubmitting(true);
+    setErrorMessage("");
+
     try {
-      // Send POST request to create a new user
-      await axios.post(
-        "/admin/create-user", // Your API endpoint
-        { username, password, role, fullName },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Send JWT token in the header for authorization
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      alert("User created successfully");
-      // Optionally clear the form after success
+      const userData = {
+        firstName: fullName.split(" ")[0] || fullName,
+        lastName: fullName.split(" ").slice(1).join(" ") || "",
+        email: username,
+        password,
+        role,
+        department: department || "administration",
+        phone: phone || "000-000-0000",
+        employeeId: `EMP${Date.now()}`,
+      };
+
+      await userService.createUser(userData);
+      
+      alert("User created successfully!");
+      
+      // Clear form
       setUsername("");
       setPassword("");
       setRole("");
       setFullName("");
+      setPhone("");
+      setDepartment("");
     } catch (error) {
       console.error("Error creating user:", error);
-      setErrorMessage("Failed to create user. Please try again.");
+      setErrorMessage(error.message || "Failed to create user. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -84,6 +101,15 @@ const CreateUser = () => {
           required
           style={{ marginBottom: "10px" }}
         />
+        <TextField
+          label="Phone"
+          variant="outlined"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          fullWidth
+          style={{ marginBottom: "10px" }}
+          placeholder="e.g., +234-123-456-7890"
+        />
         <FormControl fullWidth required style={{ marginBottom: "10px" }}>
           <InputLabel>Role</InputLabel>
           <Select
@@ -93,11 +119,28 @@ const CreateUser = () => {
           >
             <MenuItem value="doctor">Doctor</MenuItem>
             <MenuItem value="nurse">Nurse</MenuItem>
+            <MenuItem value="receptionist">Receptionist</MenuItem>
+            <MenuItem value="lab_tech">Lab Technician</MenuItem>
+            <MenuItem value="pharmacist">Pharmacist</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
           </Select>
         </FormControl>
-        <Button type="submit" variant="contained" color="primary">
-          Create User
+        <TextField
+          label="Department"
+          variant="outlined"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          fullWidth
+          style={{ marginBottom: "10px" }}
+          placeholder="e.g., Cardiology, Emergency, etc."
+        />
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          disabled={submitting}
+        >
+          {submitting ? "Creating..." : "Create User"}
         </Button>
       </form>
     </div>
