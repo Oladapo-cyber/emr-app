@@ -62,8 +62,7 @@ const patientSchema = new mongoose.Schema(
       // Standard blood types - optional field
       enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
-    allergies: [
-      // Array of allergy objects
+    allergies: [ 
       {
         type: String,
         trim: true,
@@ -218,7 +217,7 @@ patientSchema.statics.searchPatients = function (searchTerm) {
   const regex = new RegExp(searchTerm, "i"); // Case-insensitive search
   
   return this.find({
-    isActive: true,[]
+    isActive: true,
     $or: [
       { firstName: regex },
       { lastName: regex },
