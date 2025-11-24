@@ -6,6 +6,7 @@ import PatientInfoTab from "./PatientInfoTab";
 import AppointmentHistoryTab from "./AppointmentHistoryTab";
 import NextTreatmentTab from "./NextTreatmentTab";
 import MedicalRecordTab from "./MedicalRecordTab";
+import { patientService } from "../services";
 
 const tabs = [
   "Patient Information",
@@ -14,33 +15,36 @@ const tabs = [
   "Medical Record",
 ];
 
-// Sample patient data - would come from API in real app
-const patientsData = {
-  P001: {
-    name: "Willie Jennie",
-    notes: "Have uneven jawline",
-  },
-  P002: {
-    name: "Christopher Smallwood",
-    notes: "The lower and upper lips have canker sores",
-  },
-  P003: {
-    name: "Maria Garcia",
-    notes: "Regular patient, excellent oral hygiene",
-  },
-};
-
 const PatientDetails = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const patientId = searchParams.get("id");
   const defaultTab = searchParams.get("tab") || tabs[0];
 
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [patientData, setPatientData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Get patient data based on ID
-  const patientData = patientsData[patientId] || {
-    name: "Unknown Patient",
-    notes: "",
+  // Fetch patient data on mount
+  useEffect(() => {
+    if (patientId) {
+      fetchPatientData();
+    }
+  }, [patientId]);
+
+  const fetchPatientData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await patientService.getPatientById(patientId);
+      setPatientData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch patient:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -79,17 +83,43 @@ const PatientDetails = () => {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !patientData) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">Failed to load patient details: {error || 'Patient not found'}</p>
+        <button 
+          onClick={fetchPatientData}
+          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const patientName = `${patientData.firstName || ''} ${patientData.lastName || ''}`;
+
   return (
     <>
       <div className="flex items-center">
         <Avatar sx={{ width: 64, height: 64 }}>
-          {getInitials(patientData.name)}
+          {getInitials(patientName)}
         </Avatar>
         <div className="flex flex-col ml-4">
-          <p className="text-xl font-semibold">{patientData.name}</p>
+          <p className="text-xl font-semibold">{patientName}</p>
           <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
             <StickyNote2Outlined fontSize="small" className="text-blue-500" />
-            <span>{patientData.notes}</span>
+            <span>{patientData.medicalHistory?.allergies?.join(', ') || 'No allergies noted'}</span>
             <button className="text-blue-600 hover:underline">Edit</button>
           </div>
         </div>
