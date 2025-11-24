@@ -1,6 +1,6 @@
 import Appointment from '../models/Appointment.js';
-import User from '../models/User.js';
 import logger from '../utils/logger.js';
+import emailService from '../utils/emailService.js';
 
 export const createAppointment = async (req, res, next) => {
   try {
@@ -13,6 +13,25 @@ export const createAppointment = async (req, res, next) => {
     await appointment.populate(['patient', 'provider']);
 
     logger.info(`New appointment created: ${appointment._id}`);
+
+    // Send email notification to patient
+    try {
+      await emailService.sendAppointmentConfirmation(
+        appointment.patient.email,
+        {
+          patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+          doctorName: `${appointment.provider.firstName} ${appointment.provider.lastName}`,
+          appointmentDate: appointment.appointmentDate,
+          appointmentTime: appointment.appointmentTime.start,
+          department: appointment.department,
+          reasonForVisit: appointment.reasonForVisit
+        }
+      );
+      logger.info(`Appointment confirmation email sent to ${appointment.patient.email}`);
+    } catch (emailError) {
+      // Log email error but don't fail the appointment creation
+      logger.error(`Failed to send appointment email: ${emailError.message}`);
+    }
 
     res.status(201).json({
       success: true,
@@ -82,14 +101,9 @@ export const updateAppointment = async (req, res, next) => {
   try {
     const appointment = await Appointment.findByIdAndUpdate(
       req.params.id,
-      { 
-        ...req.body,
-        updatedBy: req.user._id 
-      },
+      { ...req.body, updatedBy: req.user._id },
       { new: true, runValidators: true }
-    )
-    .populate('patient', 'firstName lastName patientId')
-    .populate('provider', 'firstName lastName');
+    ).populate(['patient', 'provider']);
 
     if (!appointment) {
       return res.status(404).json({
@@ -98,9 +112,28 @@ export const updateAppointment = async (req, res, next) => {
       });
     }
 
+    // Send email notification if appointment is rescheduled
+    if (req.body.appointmentDate || req.body.appointmentTime) {
+      try {
+        await emailService.sendAppointmentRescheduled(
+          appointment.patient.email,
+          {
+            patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+            doctorName: `${appointment.provider.firstName} ${appointment.provider.lastName}`,
+            appointmentDate: appointment.appointmentDate,
+            appointmentTime: appointment.appointmentTime.start,
+            department: appointment.department
+          }
+        );
+        logger.info(`Appointment rescheduled email sent to ${appointment.patient.email}`);
+      } catch (emailError) {
+        logger.error(`Failed to send rescheduled email: ${emailError.message}`);
+      }
+    }
+
     logger.info(`Appointment updated: ${appointment._id}`);
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Appointment updated successfully',
       data: appointment
@@ -112,14 +145,7 @@ export const updateAppointment = async (req, res, next) => {
 
 export const deleteAppointment = async (req, res, next) => {
   try {
-    const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
-      { 
-        status: 'cancelled',
-        updatedBy: req.user._id
-      },
-      { new: true }
-    );
+    const appointment = await Appointment.findById(req.params.id).populate(['patient', 'provider']);
 
     if (!appointment) {
       return res.status(404).json({
@@ -128,11 +154,33 @@ export const deleteAppointment = async (req, res, next) => {
       });
     }
 
+    // Soft delete - update status to cancelled
+    appointment.status = 'cancelled';
+    appointment.updatedBy = req.user._id;
+    await appointment.save();
+
+    // Send cancellation email
+    try {
+      await emailService.sendAppointmentCancellation(
+        appointment.patient.email,
+        {
+          patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+          doctorName: `${appointment.provider.firstName} ${appointment.provider.lastName}`,
+          appointmentDate: appointment.appointmentDate,
+          appointmentTime: appointment.appointmentTime.start
+        }
+      );
+      logger.info(`Appointment cancellation email sent to ${appointment.patient.email}`);
+    } catch (emailError) {
+      logger.error(`Failed to send cancellation email: ${emailError.message}`);
+    }
+
     logger.info(`Appointment cancelled: ${appointment._id}`);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: 'Appointment cancelled successfully'
+      message: 'Appointment cancelled successfully',
+      data: appointment
     });
   } catch (error) {
     next(error);
