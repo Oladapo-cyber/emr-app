@@ -342,7 +342,7 @@ const Patients = () => {
                       {patient.gender}
                     </td>
                     <td className="px-6 py-4 text-gray-700">
-                      {calculateAge(patient.dateOfBirth)}
+                      {patient.age || calculateAge(patient.dateOfBirth)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">

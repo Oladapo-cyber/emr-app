@@ -1,7 +1,6 @@
 import {
   DashboardRounded,
   LocalHospitalOutlined,
-  SupportAgent,
   Schedule,
   FolderOpen,
   Settings,
@@ -191,26 +190,6 @@ const Sidebar = () => {
               }}
             />
             Report
-          </NavLink>
-        </li>
-        <li className="pb-2">
-          <NavLink
-            to="/support"
-            className={({ isActive }) =>
-              `flex items-center gap-2 p-1.5 rounded-lg cursor-pointer whitespace-nowrap
-hover:bg-[#e8f0fb] hover:text-[#4059e7] transition-colors
-${isActive ? "bg-[#e8f0fb] text-[#4059e7] font-semibold" : ""}`
-            }
-          >
-            <SupportAgent
-              sx={{
-                fontSize: 28,
-                backgroundColor: "#e8f0fb",
-                borderRadius: "50%",
-                padding: "4px",
-              }}
-            />
-            Help & Support
           </NavLink>
         </li>
       </ul>

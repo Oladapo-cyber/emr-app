@@ -49,6 +49,22 @@ api.interceptors.response.use(
       message: error.message,
     });
 
+    // Handle 429 Too Many Requests - Rate Limiting
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+      
+      console.warn(`[Rate Limited] Retrying after ${waitTime}ms`);
+      
+      const rateLimitError = new Error(
+        `Too many requests. Please wait ${Math.ceil(waitTime / 1000)} seconds and try again.`
+      );
+      rateLimitError.isRateLimit = true;
+      rateLimitError.retryAfter = waitTime;
+      
+      return Promise.reject(rateLimitError);
+    }
+
     // Handle 401 (token expired)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

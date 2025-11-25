@@ -143,9 +143,10 @@ export const deletePatient = async (req, res, next) => {
 
     logger.info(`Patient deleted: ${patient.patientId}`);
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: "Patient deleted successfully",
+      data: patient,
     });
   } catch (error) {
     next(error);
