@@ -15,11 +15,13 @@ import Patients from "./pages/Patients";
 import Scheduling from "./pages/Scheduling";
 import Breadcrumbs from "./components/Breadcrumbs";
 import PatientDetails from "./components/PatientDetails";
-import CustomerSupport from "./pages/CustomerSupport";
 import NotFound from "./components/modals/NotFound";
 import Login from "./components/Login";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CreateUser from "./components/admin/CreateUser";
+import ManageUsers from "./components/admin/ManageUsers";
+import AdminDashboard from "./components/admin/AdminDashboard";
 
 function App() {
   const location = useLocation();
@@ -67,7 +69,31 @@ function App() {
               path="/patients/patient-details"
               element={<PatientDetails />}
             />
-            <Route path="/support" element={<CustomerSupport />} />
+            {/* Admin Routes - Protected by role */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/create-user"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <CreateUser />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manage-users"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ManageUsers />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/404" element={null} />
             <Route
               path="*"
