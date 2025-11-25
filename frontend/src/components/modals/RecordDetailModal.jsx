@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit } from "@mui/icons-material";
+0import { Edit, FolderOpen } from "@mui/icons-material";
 
 const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
   if (!record) return null;
@@ -10,8 +10,8 @@ const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
-            {getCategoryIcon(record.category)}
-            <h2 className="text-xl font-semibold">{record.condition}</h2>
+            {getCategoryIcon(record.recordType)}
+            <h2 className="text-xl font-semibold">{record.diagnosis}</h2>
           </div>
           <button
             onClick={onClose}
@@ -51,8 +51,8 @@ const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
                 <div className="font-medium">{record.date}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-500">Category</div>
-                <div className="font-medium">{record.category}</div>
+                <div className="text-sm text-gray-500">Record Type</div>
+                <div className="font-medium">{record.recordType}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500">Status</div>
@@ -84,8 +84,8 @@ const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
             </h3>
             <div className="space-y-4">
               <div>
-                <div className="text-sm text-gray-500">Condition</div>
-                <div className="font-medium">{record.condition}</div>
+                <div className="text-sm text-gray-500">Diagnosis</div>
+                <div className="font-medium">{record.diagnosis}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-500">Treatment</div>
@@ -98,31 +98,88 @@ const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
             </div>
           </div>
 
-          {/* Vitals */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-3">VITALS</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-500">BLOOD PRESSURE</div>
-                <div className="text-xl font-bold text-blue-700">
-                  {record.vitals?.bp || "N/A"}
-                </div>
-              </div>
-              <div className="bg-green-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-500">HEART RATE</div>
-                <div className="text-xl font-bold text-green-700">
-                  {record.vitals?.hr || "N/A"}{" "}
-                  <span className="text-sm">bpm</span>
-                </div>
-              </div>
-              <div className="bg-orange-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-500">TEMPERATURE</div>
-                <div className="text-xl font-bold text-orange-700">
-                  {record.vitals?.temp || "N/A"}
-                </div>
+          {/* Vital Signs Section */}
+          {record.vitalSigns && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">
+                VITAL SIGNS
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {record.vitalSigns.temperature && (
+                  <div>
+                    <div className="text-sm text-gray-500">Temperature</div>
+                    <div className="font-medium">
+                      {record.vitalSigns.temperature}°F
+                    </div>
+                  </div>
+                )}
+                {record.vitalSigns.bloodPressure && (
+                  <div>
+                    <div className="text-sm text-gray-500">Blood Pressure</div>
+                    <div className="font-medium">
+                      {record.vitalSigns.bloodPressure.systolic}/
+                      {record.vitalSigns.bloodPressure.diastolic} mmHg
+                    </div>
+                  </div>
+                )}
+                {record.vitalSigns.heartRate && (
+                  <div>
+                    <div className="text-sm text-gray-500">Heart Rate</div>
+                    <div className="font-medium">
+                      {record.vitalSigns.heartRate} bpm
+                    </div>
+                  </div>
+                )}
+                {record.vitalSigns.weight && (
+                  <div>
+                    <div className="text-sm text-gray-500">Weight</div>
+                    <div className="font-medium">
+                      {record.vitalSigns.weight} kg
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Medications Section */}
+          {record.medications && record.medications.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">
+                MEDICATIONS
+              </h3>
+              <div className="space-y-2">
+                {record.medications.map((med, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="font-medium">{med.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {med.dosage} - {med.frequency} for {med.duration}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Attachments Section */}
+          {record.attachments && record.attachments.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">
+                ATTACHMENTS
+              </h3>
+              <div className="space-y-2">
+                {record.attachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                  >
+                    <FolderOpen fontSize="small" className="text-gray-400" />
+                    <span className="text-sm">{file.filename}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           {record.notes && (

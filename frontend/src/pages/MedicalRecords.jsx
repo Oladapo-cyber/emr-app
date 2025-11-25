@@ -63,7 +63,7 @@ const MedicalRecords = () => {
     
     try {
       const response = await medicalRecordService.getMedicalRecords({
-        type: filterType === 'All' ? undefined : filterType.toLowerCase().replace(' ', '_'),
+        type: transformFilterType(filterType),
         page,
         limit: 10
       });
@@ -79,7 +79,14 @@ const MedicalRecords = () => {
         doctor: `${record.attendingPhysician?.firstName || 'Dr.'} ${record.attendingPhysician?.lastName || 'Unknown'}`,
         date: record.visitDate || record.createdAt,
         status: record.status ? capitalizeFirstLetter(record.status) : 'Completed',
-        notes: record.notes || ''
+        notes: record.notes || '',
+        // Extended fields for detailed view
+        vitalSigns: record.vitalSigns,
+        medications: record.medications || [],
+        attachments: record.attachments || [],
+        labResults: record.labResults || [],
+        chiefComplaint: record.chiefComplaint,
+        symptoms: record.symptoms || []
       }));
 
       // Filter by search and status
@@ -108,9 +115,16 @@ const MedicalRecords = () => {
     }
   };
 
+  // Helper function to format visit type for display
   const formatRecordType = (type) => {
-    if (!type) return 'Consultation';
-    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const typeMap = {
+      'routine_checkup': 'Routine Checkup',
+      'emergency': 'Emergency',
+      'follow_up': 'Follow-up',
+      'consultation': 'Consultation',
+      'procedure': 'Procedure'
+    };
+    return typeMap[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const capitalizeFirstLetter = (str) => {
@@ -216,10 +230,11 @@ const MedicalRecords = () => {
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <option value="All">All Types</option>
+              <option value="Routine Checkup">Routine Checkup</option>
               <option value="Consultation">Consultation</option>
-              <option value="Surgery">Surgery</option>
-              <option value="Preventive">Preventive</option>
               <option value="Emergency">Emergency</option>
+              <option value="Follow-up">Follow-up</option>
+              <option value="Procedure">Procedure</option>
             </select>
             <select
               value={filterStatus}
@@ -230,9 +245,9 @@ const MedicalRecords = () => {
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <option value="All">All Status</option>
+              <option value="Draft">Draft</option>
               <option value="Completed">Completed</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Pending">Pending</option>
+              <option value="Reviewed">Reviewed</option>
             </select>
           </div>
         </div>
@@ -446,3 +461,17 @@ const MedicalRecords = () => {
 };
 
 export default MedicalRecords;
+
+const transformFilterType = (displayType) => {
+  if (displayType === 'All') return undefined;
+  
+  const typeMap = {
+    'Routine Checkup': 'routine_checkup',
+    'Consultation': 'consultation',
+    'Emergency': 'emergency',
+    'Follow-up': 'follow_up',
+    'Procedure': 'procedure'
+  };
+  
+  return typeMap[displayType] || displayType.toLowerCase().replace(' ', '_');
+};

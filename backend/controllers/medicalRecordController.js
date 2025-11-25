@@ -26,7 +26,7 @@ export const createMedicalRecord = async (req, res, next) => {
 
 export const getMedicalRecords = async (req, res, next) => {
   try {
-    const { patient, startDate, endDate, type } = req.query;
+    const { patient, startDate, endDate, type, page = 1, limit = 10 } = req.query;
     let query = {};
 
     if (patient) query.patient = patient;
@@ -38,16 +38,30 @@ export const getMedicalRecords = async (req, res, next) => {
       };
     }
 
+    // Pagination
+    const pageInt = Math.max(1, parseInt(page, 10));
+    const limitInt = Math.max(1, parseInt(limit, 10));
+    const skip = (pageInt - 1) * limitInt;
+
+    // Get total count for pagination
+    const total = await MedicalRecord.countDocuments(query);
+
+    // Fetch paginated records
     const records = await MedicalRecord.find(query)
       .populate('patient', 'firstName lastName patientId')
       .populate('attendingPhysician', 'firstName lastName')
-      .sort({ visitDate: -1 });
+      .sort({ visitDate: -1 })
+      .skip(skip)
+      .limit(limitInt);
 
     res.json({
       success: true,
       message: 'Medical records retrieved successfully',
       data: records,
-      count: records.length
+      count: records.length,
+      total,
+      totalPages: Math.ceil(total / limitInt),
+      currentPage: pageInt
     });
   } catch (error) {
     next(error);
