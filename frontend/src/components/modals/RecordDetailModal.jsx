@@ -1,5 +1,5 @@
 import React from "react";
-0import { Edit, FolderOpen } from "@mui/icons-material";
+import { Edit, FolderOpen } from "@mui/icons-material";
 
 const RecordDetailModal = ({ record, onClose, onEdit, getCategoryIcon }) => {
   if (!record) return null;

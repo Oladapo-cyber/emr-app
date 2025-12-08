@@ -12,100 +12,27 @@ import {
   Edit,
   Visibility,
   FilterList,
+  SearchOff,
+  FilterAltOff,
 } from "@mui/icons-material";
 import RecordDetailModal from "./modals/RecordDetailModal";
 import EditRecordModal from "./modals/EditRecordModal";
-import { SearchOff, FilterAltOff } from "@mui/icons-material";
-
-// Sample medical records data for general hospital
-const medicalRecordsData = {
-  P001: [
-    {
-      id: "MR001",
-      date: "MAY 15",
-      category: "Diagnosis",
-      condition: "Hypertension",
-      treatment: "Prescribed Lisinopril 10mg",
-      doctor: "Dr. Sarah Johnson",
-      status: "Active",
-      notes:
-        "Patient presenting with consistently elevated blood pressure readings. Monitor regularly.",
-      vitals: {
-        bp: "160/95",
-        hr: "88",
-        temp: "98.6°F",
-      },
-    },
-    {
-      id: "MR002",
-      date: "JUN 22",
-      category: "Follow-up",
-      condition: "Hypertension",
-      treatment: "Medication adjustment",
-      doctor: "Dr. Sarah Johnson",
-      status: "Completed",
-      notes: "Blood pressure improving. Increased dose to 20mg daily.",
-      vitals: {
-        bp: "145/88",
-        hr: "76",
-        temp: "98.4°F",
-      },
-    },
-  ],
-  P002: [
-    {
-      id: "MR003",
-      category: "Procedure",
-      date: "APR 03",
-      condition: "Appendicitis",
-      treatment: "Appendectomy",
-      doctor: "Dr. Michael Stevens",
-      status: "Completed",
-      notes:
-        "Emergency procedure performed successfully. Patient recovered well post-operation.",
-      vitals: {
-        bp: "130/85",
-        hr: "92",
-        temp: "99.1°F",
-      },
-    },
-  ],
-  P003: [
-    {
-      id: "MR004",
-      date: "JAN 10",
-      category: "Lab Work",
-      condition: "Annual Physical",
-      treatment: "CBC, Comprehensive Metabolic Panel",
-      doctor: "Dr. Emily Wilson",
-      status: "Completed",
-      notes:
-        "All lab results within normal range. Vitamin D slightly low - recommended supplement.",
-      vitals: {
-        bp: "120/80",
-        hr: "72",
-        temp: "98.6°F",
-      },
-    },
-  ],
-};
+import { medicalRecordService } from "../services";
+import { formatDate } from "../utils/dateUtils";
 
 // Get appropriate icon for record category
 const getCategoryIcon = (category) => {
-  switch (category) {
-    case "Diagnosis":
-      return <LocalHospital className="text-blue-500" />;
-    case "Lab Work":
-      return <Science className="text-purple-500" />;
-    case "Procedure":
-      return <BloodtypeOutlined className="text-red-500" />;
-    case "Follow-up":
-      return <MonitorHeart className="text-green-500" />;
-    case "Medication":
-      return <Medication className="text-orange-500" />;
-    default:
-      return <LocalHospital className="text-gray-500" />;
-  }
+  const categoryMap = {
+    'routine_checkup': <MonitorHeart className="text-green-500" />,
+    'emergency': <LocalHospital className="text-red-500" />,
+    'follow_up': <MonitorHeart className="text-green-500" />,
+    'consultation': <LocalHospital className="text-blue-500" />,
+    'procedure': <BloodtypeOutlined className="text-red-500" />,
+    'lab_result': <Science className="text-purple-500" />,
+    'diagnosis': <LocalHospital className="text-blue-500" />,
+  };
+  
+  return categoryMap[category] || <LocalHospital className="text-gray-500" />;
 };
 
 const MedicalRecordTab = ({ patientId }) => {
@@ -114,67 +41,85 @@ const MedicalRecordTab = ({ patientId }) => {
   const recordId = searchParams.get("recordId");
   const isEditing = searchParams.get("edit") === "true";
 
-  // Add these state variables for the modal
+  // State management
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetailRecord, setSelectedDetailRecord] = useState(null);
-
-  // Add state for active filter
   const [activeFilter, setActiveFilter] = useState("all");
 
-  // Get records for this patient
-  const records = medicalRecordsData[id] || [];
+  // Fetch medical records on component mount
+  useEffect(() => {
+    if (id) {
+      fetchMedicalRecords();
+    }
+  }, [id]);
+
+  const fetchMedicalRecords = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await medicalRecordService.getPatientRecords(id);
+      
+      // Transform backend data to component format
+      const transformedRecords = (response.data || []).map(record => ({
+        id: record._id,
+        date: formatRecordDate(record.visitDate || record.createdAt),
+        category: formatCategory(record.visitType),
+        condition: record.diagnosis || 'N/A',
+        treatment: record.treatment || 'N/A',
+        doctor: `${record.attendingPhysician?.firstName || 'Dr.'} ${record.attendingPhysician?.lastName || 'Unknown'}`,
+        status: formatStatus(record.status),
+        notes: record.notes || '',
+        vitals: record.vitalSigns || null,
+        // Keep full record for detailed view
+        fullRecord: record
+      }));
+
+      setRecords(transformedRecords);
+    } catch (err) {
+      console.error('Failed to fetch medical records:', err);
+      setError(err.message || 'Failed to load medical records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper functions
+  const formatRecordDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const day = date.getDate();
+    return `${month} ${day}`;
+  };
+
+  const formatCategory = (visitType) => {
+    const categoryMap = {
+      'routine_checkup': 'Routine Checkup',
+      'emergency': 'Emergency',
+      'follow_up': 'Follow-up',
+      'consultation': 'Consultation',
+      'procedure': 'Procedure'
+    };
+    return categoryMap[visitType] || visitType;
+  };
+
+  const formatStatus = (status) => {
+    const statusMap = {
+      'draft': 'Pending',
+      'completed': 'Completed',
+      'reviewed': 'Active'
+    };
+    return statusMap[status] || status;
+  };
 
   // Find current record to display/edit
   const currentRecord = recordId
     ? records.find((r) => r.id === recordId)
     : null;
-
-  // Form state for editing
-  const [formValues, setFormValues] = useState(
-    currentRecord
-      ? {
-          category: currentRecord.category,
-          condition: currentRecord.condition,
-          treatment: currentRecord.treatment,
-          notes: currentRecord.notes,
-          status: currentRecord.status,
-          doctor: currentRecord.doctor,
-        }
-      : {}
-  );
-
-  // Update form when record changes
-  useEffect(() => {
-    if (currentRecord) {
-      setFormValues({
-        category: currentRecord.category,
-        condition: currentRecord.condition,
-        treatment: currentRecord.treatment,
-        notes: currentRecord.notes,
-        status: currentRecord.status,
-        doctor: currentRecord.doctor,
-      });
-    }
-  }, [currentRecord]);
-
-  // Form handlers
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormValues((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSearchParams({ id, tab: "Medical Record", recordId });
-  };
-
-  const handleCancel = () => {
-    // Exit edit mode without saving
-    setSearchParams({ id, tab: "Medical Record", recordId });
-  };
 
   // Filter records based on active filter
   const filteredRecords = records.filter((record) => {
@@ -182,24 +127,59 @@ const MedicalRecordTab = ({ patientId }) => {
     return record.category === activeFilter;
   });
 
+  // Get latest vitals from most recent record
+  const latestVitals = records.length > 0 && records[0].vitals 
+    ? records[0].vitals 
+    : null;
+
+  // Handle record update
+  const handleRecordUpdate = async (updatedRecord) => {
+    try {
+      await medicalRecordService.updateMedicalRecord(currentRecord.id, updatedRecord);
+      
+      // Refresh records after update
+      await fetchMedicalRecords();
+      
+      // Exit edit mode
+      setSearchParams({ id, tab: "Medical Record" });
+    } catch (err) {
+      console.error('Failed to update record:', err);
+      alert(`Failed to update record: ${err.message}`);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-500">Loading medical records...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <div className="text-red-500 text-center">
+          <p className="text-lg font-semibold">Failed to load medical records</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <button
+          onClick={fetchMedicalRecords}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Medical Record Categories */}
-      {/* <div className="flex gap-2 mb-4">
-        <button className="px-4 py-1 rounded-full border bg-blue-600 text-white border-blue-600">
-          All Records
-        </button>
-        <button className="px-4 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">
-          Diagnoses
-        </button>
-        <button className="px-4 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">
-          Lab Results
-        </button>
-        <button className="px-4 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:bg-gray-50">
-          Procedures
-        </button>
-      </div> */}
-
       {/* Filter section */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
@@ -219,56 +199,28 @@ const MedicalRecordTab = ({ patientId }) => {
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-            All Records
+            All Records ({records.length})
           </button>
 
-          <button
-            onClick={() => setActiveFilter("Diagnosis")}
-            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
-              activeFilter === "Diagnosis"
-                ? "bg-green-100 text-green-700 border border-green-200"
-                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            Diagnosis
-          </button>
-
-          <button
-            onClick={() => setActiveFilter("Lab Work")}
-            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
-              activeFilter === "Lab Work"
-                ? "bg-purple-100 text-purple-700 border border-purple-200"
-                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-            Lab Work
-          </button>
-
-          <button
-            onClick={() => setActiveFilter("Procedure")}
-            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
-              activeFilter === "Procedure"
-                ? "bg-orange-100 text-orange-700 border border-orange-200"
-                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-            Procedure
-          </button>
-
-          <button
-            onClick={() => setActiveFilter("Follow-up")}
-            className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
-              activeFilter === "Follow-up"
-                ? "bg-teal-100 text-teal-700 border border-teal-200"
-                : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
-            Follow-up
-          </button>
+          {['Routine Checkup', 'Emergency', 'Follow-up', 'Consultation', 'Procedure'].map(category => {
+            const count = records.filter(r => r.category === category).length;
+            if (count === 0) return null;
+            
+            return (
+              <button
+                key={category}
+                onClick={() => setActiveFilter(category)}
+                className={`px-3 py-1.5 text-sm rounded-full flex items-center gap-1 ${
+                  activeFilter === category
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                {category} ({count})
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -281,35 +233,49 @@ const MedicalRecordTab = ({ patientId }) => {
           </div>
 
           <div className="space-y-4">
-            {records.length > 0 ? (
+            {latestVitals ? (
               <div>
                 {/* Latest vitals */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="bg-blue-50 p-3 rounded-lg text-center">
-                    <p className="text-xs text-gray-500">BLOOD PRESSURE</p>
-                    <p className="text-xl font-bold text-blue-700">
-                      {records[0].vitals.bp}
-                    </p>
-                  </div>
-                  <div className="bg-green-50 p-3 rounded-lg text-center">
-                    <p className="text-xs text-gray-500">HEART RATE</p>
-                    <p className="text-xl font-bold text-green-700">
-                      {records[0].vitals.hr}{" "}
-                      <span className="text-sm">bpm</span>
-                    </p>
-                  </div>
-                  <div className="bg-orange-50 p-3 rounded-lg text-center">
-                    <p className="text-xs text-gray-500">TEMPERATURE</p>
-                    <p className="text-xl font-bold text-orange-700">
-                      {records[0].vitals.temp}
-                    </p>
-                  </div>
+                  {latestVitals.bloodPressure && (
+                    <div className="bg-blue-50 p-3 rounded-lg text-center">
+                      <p className="text-xs text-gray-500">BLOOD PRESSURE</p>
+                      <p className="text-xl font-bold text-blue-700">
+                        {latestVitals.bloodPressure.systolic}/{latestVitals.bloodPressure.diastolic}
+                      </p>
+                    </div>
+                  )}
+                  {latestVitals.heartRate && (
+                    <div className="bg-green-50 p-3 rounded-lg text-center">
+                      <p className="text-xs text-gray-500">HEART RATE</p>
+                      <p className="text-xl font-bold text-green-700">
+                        {latestVitals.heartRate} <span className="text-sm">bpm</span>
+                      </p>
+                    </div>
+                  )}
+                  {latestVitals.temperature && (
+                    <div className="bg-orange-50 p-3 rounded-lg text-center">
+                      <p className="text-xs text-gray-500">TEMPERATURE</p>
+                      <p className="text-xl font-bold text-orange-700">
+                        {latestVitals.temperature}°F
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {latestVitals.weight && (
+                  <div className="bg-purple-50 p-3 rounded-lg mb-4">
+                    <p className="text-xs text-gray-500">Weight</p>
+                    <p className="text-lg font-bold text-purple-700">
+                      {latestVitals.weight} kg
+                    </p>
+                  </div>
+                )}
 
                 {/* Vitals history chart (placeholder) */}
                 <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
                   <p className="text-gray-500 text-sm">
-                    BP & Heart Rate Trend Chart
+                    Vitals Trend Chart
                   </p>
                 </div>
               </div>
@@ -325,16 +291,11 @@ const MedicalRecordTab = ({ patientId }) => {
         <div className="flex-1">
           {isEditing && currentRecord ? (
             <EditRecordModal
-              record={currentRecord}
-              onSave={(updatedRecord) => {
-                // In a real app, you would update the database here
-                // For now, just exit edit mode
-                setSearchParams({ id, tab: "Medical Record", recordId });
-              }}
-              onCancel={handleCancel}
+              record={currentRecord.fullRecord || currentRecord}
+              onSave={handleRecordUpdate}
+              onCancel={() => setSearchParams({ id, tab: "Medical Record" })}
             />
           ) : (
-            // Keep your existing timeline view code
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="bg-blue-100 p-1 rounded text-blue-500">
@@ -374,7 +335,7 @@ const MedicalRecordTab = ({ patientId }) => {
 
                           <div>
                             <div className="flex items-center gap-2">
-                              {getCategoryIcon(record.category)}
+                              {getCategoryIcon(record.fullRecord?.visitType || record.category.toLowerCase().replace(' ', '_'))}
                               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                                 {record.category}
                               </span>
@@ -437,7 +398,6 @@ const MedicalRecordTab = ({ patientId }) => {
                           <button
                             className="flex items-center gap-1 text-green-500 text-sm hover:text-green-700 hover:font-bold"
                             onClick={() => {
-                              // This updates URL parameters to trigger edit mode
                               setSearchParams({
                                 id: id,
                                 tab: "Medical Record",
